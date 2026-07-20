@@ -1,0 +1,426 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/theme.dart';
+import '../../providers/providers.dart';
+import '../../data/models/models.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  Timer? _timer;
+  Duration _remaining = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _tick() {
+    final content = ref.read(contentProvider);
+    if (content.data == null) return;
+    final target = DateTime.tryParse(content.data!.event.targetDate);
+    if (target == null) return;
+    final now = DateTime.now();
+    if (target.isAfter(now)) {
+      setState(() => _remaining = target.difference(now));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = ref.watch(contentProvider);
+
+    return RefreshIndicator(
+      color: AppTheme.teal,
+      onRefresh: () =>
+          ref.read(contentProvider.notifier).loadContent(forceRefresh: true),
+      child: content.data == null && content.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : content.data == null
+              ? _buildError(content.error)
+              : _buildContent(content.data!),
+    );
+  }
+
+  Widget _buildError(String? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, size: 56, color: AppTheme.textLight),
+            const SizedBox(height: 16),
+            Text(error ?? 'Failed to load content',
+                textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => ref.read(contentProvider.notifier).loadContent(forceRefresh: true),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(SiteData data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return CustomScrollView(
+      slivers: [
+        // Website-style Hero
+        SliverToBoxAdapter(child: _buildHero(data, isDark)),
+
+        // Countdown
+        if (_remaining > Duration.zero)
+          SliverToBoxAdapter(child: _buildCountdown(isDark)),
+
+        // Trip Updates
+        if (data.updates.isNotEmpty) ...[
+          _sectionHeader('Trip Updates', Icons.campaign_outlined),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => _buildUpdateCard(data.updates[i], isDark),
+              childCount: data.updates.length,
+            ),
+          ),
+        ],
+
+        // Cache indicator
+        if (ref.read(contentProvider).isFromCache)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cached, size: 14, color: AppTheme.textLight),
+                  const SizedBox(width: 6),
+                  Text('Showing cached data · Pull to refresh',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
+                ],
+              ),
+            ),
+          ),
+
+        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+      ],
+    );
+  }
+
+  Widget _buildHero(SiteData data, bool isDark) {
+    // Use first programme day image as hero background, if available
+    String? bgImageUrl;
+    if (data.programme.days.isNotEmpty) {
+      bgImageUrl = data.programme.days.first.image;
+    }
+
+    return Stack(
+      children: [
+        // Background image
+        if (bgImageUrl != null && bgImageUrl.isNotEmpty)
+          SizedBox(
+            width: double.infinity,
+            height: 420,
+            child: CachedNetworkImage(
+              imageUrl: bgImageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                height: 420,
+                color: AppTheme.tealDark,
+              ),
+              errorWidget: (_, __, ___) => Container(
+                height: 420,
+                color: AppTheme.tealDark,
+              ),
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: 420,
+            color: AppTheme.tealDark,
+          ),
+
+        // Dark gradient overlay (makes text readable)
+        Container(
+          width: double.infinity,
+          height: 420,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1A3330).withValues(alpha: 0.85),
+                const Color(0xFF1A3330).withValues(alpha: 0.75),
+                const Color(0xFF0F1F1D).withValues(alpha: 0.90),
+              ],
+            ),
+          ),
+        ),
+
+        // Hero content on top
+        SizedBox(
+          width: double.infinity,
+          height: 420,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo image
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/icon.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.flight_takeoff, size: 36, color: AppTheme.goldLight),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Gold badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.gold.withValues(alpha: 0.5)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text(
+                      data.event.badge.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 3,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.goldLight.withValues(alpha: 0.95),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Title
+                  Text(
+                    data.event.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'serif',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Decorative gold line
+                  Container(
+                    width: 60,
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          AppTheme.gold.withValues(alpha: 0.6),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Subtitle - Incredible India
+                  Text(
+                    data.event.subtitle,
+                    style: TextStyle(
+                      fontFamily: 'serif',
+                      fontSize: 36,
+                      fontStyle: FontStyle.italic,
+                      color: AppTheme.goldLight.withValues(alpha: 0.95),
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Dates pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: Text(
+                      data.event.dates,
+                      style: TextStyle(
+                        fontSize: 13,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCountdown(bool isDark) {
+    final d = _remaining.inDays;
+    final h = _remaining.inHours % 24;
+    final m = _remaining.inMinutes % 60;
+    final s = _remaining.inSeconds % 60;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : AppTheme.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text('COUNTDOWN TO DEPARTURE',
+              style: TextStyle(fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.w700, color: AppTheme.gold)),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _cdUnit(d.toString().padLeft(2, '0'), 'DAYS'),
+              _cdSep(),
+              _cdUnit(h.toString().padLeft(2, '0'), 'HRS'),
+              _cdSep(),
+              _cdUnit(m.toString().padLeft(2, '0'), 'MIN'),
+              _cdSep(),
+              _cdUnit(s.toString().padLeft(2, '0'), 'SEC'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cdUnit(String value, String label) {
+    return SizedBox(
+      width: 60,
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontFamily: 'serif', fontSize: 28, fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(fontSize: 9, letterSpacing: 1.5, color: AppTheme.textLight, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _cdSep() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Text(':', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300, color: AppTheme.gold.withValues(alpha: 0.4))),
+    );
+  }
+
+  Widget _buildUpdateCard(TripUpdate update, bool isDark) {
+    Color tagColor;
+    switch (update.tag.toLowerCase()) {
+      case 'action': tagColor = Colors.orange.shade700; break;
+      case 'reminder': tagColor = AppTheme.teal; break;
+      case 'alert': tagColor = Colors.red.shade600; break;
+      default: tagColor = Colors.blue.shade600;
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: tagColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(update.tag, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tagColor)),
+                ),
+                if (update.pinned) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.push_pin, size: 14, color: AppTheme.gold),
+                ],
+                const Spacer(),
+                Text(update.date, style: TextStyle(fontSize: 11, color: AppTheme.textLight)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(update.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text(update.body,
+                style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _sectionHeader(String title, IconData icon) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.gold),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+}

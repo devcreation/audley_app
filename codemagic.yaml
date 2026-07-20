@@ -1,0 +1,61 @@
+workflows:
+  default-workflow:
+    name: Default Workflow
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Set up Flutter project scaffold
+        script: |
+          echo "==> Creating Flutter project scaffold..."
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+
+          echo "==> Backing up source code..."
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+
+          if [ -d "$CM_BUILD_DIR/assets" ]; then
+            cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets
+          fi
+
+          echo "==> Copying scaffold platform directories..."
+          rm -rf "$CM_BUILD_DIR/android"
+          cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+
+          rm -rf "$CM_BUILD_DIR/ios"
+          cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+
+          for f in .metadata; do
+            if [ -f "/tmp/scaffold/$f" ]; then
+              cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"
+            fi
+          done
+
+          echo "==> Restoring source code on top of scaffold..."
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+
+          if [ -d "/tmp/my_assets" ]; then
+            rm -rf "$CM_BUILD_DIR/assets"
+            cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"
+          fi
+
+          echo "==> Done! Project structure is ready."
+
+      - name: Install dependencies
+        script: |
+          flutter pub get
+
+      - name: Generate app icon
+        script: |
+          dart run flutter_launcher_icons
+
+      - name: Build debug APK
+        script: |
+          flutter build apk --debug
+
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
