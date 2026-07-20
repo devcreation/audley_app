@@ -86,28 +86,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildHero(SiteData data, bool isDark) {
-    // Use hero_image from API, fallback to first programme day image
-    String? bgImageUrl = data.event.heroImage;
-    if ((bgImageUrl == null || bgImageUrl.isEmpty) && data.programme.days.isNotEmpty) {
-      bgImageUrl = data.programme.days.first.image;
-    }
-
     return Stack(
       children: [
-        // Background image
-        if (bgImageUrl != null && bgImageUrl.isNotEmpty)
-          SizedBox(
-            width: double.infinity,
-            height: 440,
-            child: CachedNetworkImage(
-              imageUrl: bgImageUrl,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(height: 440, color: AppTheme.tealDark),
-              errorWidget: (_, __, ___) => Container(height: 440, color: AppTheme.tealDark),
-            ),
-          )
-        else
-          Container(width: double.infinity, height: 440, color: AppTheme.tealDark),
+        // Background image from bundled asset
+        SizedBox(
+          width: double.infinity,
+          height: 440,
+          child: Image.asset(
+            'assets/cover-bg.jpg',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(height: 440, color: AppTheme.tealDark),
+          ),
+        ),
 
         // Dark overlay
         Container(
@@ -137,20 +127,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
+                  // Logo - no background color behind it
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4))],
                     ),
                     child: ClipOval(
-                      child: Image.asset('assets/icon.png', width: 76, height: 76, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 76, height: 76,
-                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-                          child: const Icon(Icons.flight_takeoff, size: 34, color: AppTheme.goldLight),
-                        ),
-                      ),
+                      child: Image.asset('assets/icon.png', width: 76, height: 76, fit: BoxFit.cover),
                     ),
                   ),
                   const SizedBox(height: 16),

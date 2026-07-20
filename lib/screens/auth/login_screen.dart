@@ -61,25 +61,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // Logo from asset
+                  // Logo from asset - no background
                   ClipOval(
                     child: Image.asset(
                       'assets/icon.png',
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppTheme.teal, AppTheme.tealDark],
-                          ),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: const Icon(Icons.flight_takeoff,
-                            size: 40, color: AppTheme.goldLight),
-                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
