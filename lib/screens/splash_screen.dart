@@ -12,37 +12,26 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(Icons.flight_takeoff,
-                  size: 48, color: AppTheme.goldLight),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "Audley Achievers'",
-              style: TextStyle(
-                fontFamily: 'serif',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.95),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Incredible India 2026',
-              style: TextStyle(
-                fontSize: 14,
-                letterSpacing: 2,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.goldLight.withValues(alpha: 0.9),
+            // Logo centered
+            ClipOval(
+              child: Image.asset(
+                'assets/icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.flight_takeoff, size: 52, color: AppTheme.goldLight),
+                ),
               ),
             ),
             const SizedBox(height: 40),
+            // Loading indicator below logo
             const SizedBox(
               width: 28,
               height: 28,

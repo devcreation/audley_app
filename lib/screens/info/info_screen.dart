@@ -68,8 +68,6 @@ class _HotelsTab extends StatelessWidget {
                 if (contact != null) ...[
                   const Divider(height: 24),
                   _contactRow(Icons.phone_outlined, contact.phone, 'tel:${contact.phone.replaceAll(' ', '')}'),
-                  const SizedBox(height: 6),
-                  _contactRow(Icons.email_outlined, contact.email, 'mailto:${contact.email}'),
                 ],
                 if (hotel.url != null) ...[
                   const SizedBox(height: 12),
@@ -125,12 +123,6 @@ class _FleetTab extends StatelessWidget {
                 Text(v.name, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(v.desc, style: TextStyle(fontSize: 13, height: 1.5, color: isDark ? Colors.grey[400] : AppTheme.textMid)),
-                if (v.video != null) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () async { final uri = Uri.parse(v.video!); if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication); },
-                    icon: const Icon(Icons.play_circle_outline, size: 18), label: const Text('Watch Video')),
-                ],
               ]),
             ),
           ]),

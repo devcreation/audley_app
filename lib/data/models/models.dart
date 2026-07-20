@@ -58,6 +58,7 @@ class EventInfo {
   final String subtitle;
   final String dates;
   final String targetDate;
+  final String? heroImage;
 
   EventInfo({
     required this.name,
@@ -65,6 +66,7 @@ class EventInfo {
     required this.subtitle,
     required this.dates,
     required this.targetDate,
+    this.heroImage,
   });
 
   factory EventInfo.fromJson(Map<String, dynamic> json) => EventInfo(
@@ -73,6 +75,7 @@ class EventInfo {
         subtitle: json['subtitle'] ?? '',
         dates: json['dates'] ?? '',
         targetDate: json['targetDate'] ?? '',
+        heroImage: json['hero_image'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -81,6 +84,7 @@ class EventInfo {
         'subtitle': subtitle,
         'dates': dates,
         'targetDate': targetDate,
+        'hero_image': heroImage,
       };
 }
 
