@@ -6,18 +6,15 @@ import 'data/local_storage.dart';
 import 'providers/providers.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_shell.dart';
-import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Init local storage
   await LocalStorage.init();
 
   // Firebase init — uncomment after adding google-services.json / GoogleService-Info.plist
@@ -44,7 +41,7 @@ class AudleyApp extends ConsumerWidget {
   }
 }
 
-/// Checks auth status and routes to login or main shell.
+/// No loading screen — goes directly to login or home.
 class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
 
@@ -63,13 +60,11 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    switch (authState.status) {
-      case AuthStatus.unknown:
-        return const SplashScreen();
-      case AuthStatus.unauthenticated:
-        return const LoginScreen();
-      case AuthStatus.authenticated:
-        return const MainShell();
+    // Show login by default while checking auth (no splash screen)
+    // Once authenticated, switch to MainShell
+    if (authState.status == AuthStatus.authenticated) {
+      return const MainShell();
     }
+    return const LoginScreen();
   }
 }
