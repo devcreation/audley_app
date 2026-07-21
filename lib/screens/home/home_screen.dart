@@ -108,9 +108,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                const Color(0xFF1A3330).withValues(alpha: 0.82),
-                const Color(0xFF1A3330).withValues(alpha: 0.70),
-                const Color(0xFF0F1F1D).withValues(alpha: 0.88),
+                const Color(0xFF1A3330).withValues(alpha: 0.55),
+                const Color(0xFF1A3330).withValues(alpha: 0.45),
+                const Color(0xFF0F1F1D).withValues(alpha: 0.60),
               ],
             ),
           ),
@@ -127,16 +127,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo - no background color behind it
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4))],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset('assets/icon.png', width: 76, height: 76, fit: BoxFit.cover),
-                    ),
-                  ),
+
+                  // Logo - no background, no shadow
+                  Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
                   const SizedBox(height: 16),
 
                   // Badge
