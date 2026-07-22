@@ -7,7 +7,6 @@ import '../../data/models/models.dart';
 
 class ProgrammeScreen extends ConsumerStatefulWidget {
   const ProgrammeScreen({super.key});
-
   @override
   ConsumerState<ProgrammeScreen> createState() => _ProgrammeScreenState();
 }
@@ -17,169 +16,72 @@ class _ProgrammeScreenState extends ConsumerState<ProgrammeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final content = ref.watch(contentProvider);
+    final siteAsync = ref.watch(siteDataProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (content.data == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    final days = content.data!.programme.days;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Programme')),
-      body: RefreshIndicator(
-        color: AppTheme.teal,
-        onRefresh: () => ref.read(contentProvider.notifier).loadContent(forceRefresh: true),
-        child: Column(
-          children: [
-            // Date pills (show actual dates like website)
-            Container(
-              height: 56,
-              color: isDark ? AppTheme.darkSurface : AppTheme.bgWarm,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                itemCount: days.length,
-                itemBuilder: (ctx, i) {
-                  final selected = i == _selectedDay;
-                  final day = days[i];
-                  // Show "day, date" like "Fri, 11 Sep"
-                  final label = '${day.day.substring(0, 3)}, ${day.date}';
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(label),
-                      selected: selected,
-                      onSelected: (_) => setState(() => _selectedDay = i),
-                      selectedColor: AppTheme.teal,
-                      backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
-                      labelStyle: TextStyle(
-                        color: selected
-                            ? Colors.white
-                            : (isDark ? Colors.grey[300] : AppTheme.charcoal),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: selected ? AppTheme.teal : AppTheme.border,
-                          width: 0.5,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Expanded(child: _buildDayContent(days[_selectedDay], isDark)),
-          ],
-        ),
+      body: siteAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Failed to load')),
+        data: (site) {
+          if (site == null || site.programme.isEmpty) return const Center(child: Text('No programme'));
+          final days = site.programme;
+          if (_selectedDay >= days.length) _selectedDay = 0;
+          final day = days[_selectedDay];
+          return Column(children: [
+            // Day chips
+            SizedBox(height: 52, child: ListView.builder(
+              scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: days.length,
+              itemBuilder: (_, i) {
+                final d = days[i];
+                final sel = i == _selectedDay;
+                final label = '${d.day.substring(0, 3)}, ${d.date}';
+                return Padding(padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sel ? Colors.white : (isDark ? Colors.grey[300] : AppTheme.charcoal))),
+                    selected: sel, selectedColor: AppTheme.teal, backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: sel ? AppTheme.teal : AppTheme.border)),
+                    onSelected: (_) => setState(() => _selectedDay = i)));
+              },
+            )),
+            // Day header with image
+            if (day.image.isNotEmpty) SizedBox(height: 160, width: double.infinity,
+              child: Stack(children: [
+                CachedNetworkImage(imageUrl: day.image, fit: BoxFit.cover, width: double.infinity, height: 160, errorWidget: (_, __, ___) => Container(color: AppTheme.tealDark)),
+                Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)]))),
+                Positioned(bottom: 12, left: 16, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(day.dateFull, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text(day.location, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
+                ])),
+              ])),
+            // Items
+            Expanded(child: ListView.builder(
+              padding: const EdgeInsets.all(16), itemCount: day.items.length,
+              itemBuilder: (_, i) => _itemCard(day.items[i], isDark))),
+          ]);
+        },
       ),
     );
   }
 
-  Widget _buildDayContent(ProgrammeDay day, bool isDark) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        if (day.image != null && day.image!.isNotEmpty)
-          Stack(
-            children: [
-              CachedNetworkImage(
-                imageUrl: day.image!,
-                height: 180, width: double.infinity, fit: BoxFit.cover,
-                placeholder: (_, __) => Container(height: 180, color: AppTheme.teal.withValues(alpha: 0.1), child: const Center(child: CircularProgressIndicator())),
-                errorWidget: (_, __, ___) => Container(height: 180, color: AppTheme.tealDark),
-              ),
-              Positioned(
-                bottom: 0, left: 0, right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent]),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(day.dateFull, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text(day.location, style: TextStyle(color: AppTheme.goldLight, fontSize: 13, fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(day.dateFull, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                Text(day.location, style: TextStyle(fontSize: 14, color: AppTheme.teal)),
-              ],
-            ),
-          ),
-        ...day.items.map((item) => _buildScheduleItem(item, isDark)),
-      ],
-    );
-  }
-
-  Widget _buildScheduleItem(ScheduleItem item, bool isDark) {
-    Color? leftColor;
-    Color? bgColor;
-    if (item.type == 'highlight') {
-      leftColor = AppTheme.gold;
-      bgColor = AppTheme.gold.withValues(alpha: 0.06);
-    } else if (item.type == 'gala') {
-      leftColor = AppTheme.goldDark;
-      bgColor = AppTheme.gold.withValues(alpha: 0.1);
-    }
-
+  Widget _itemCard(ProgrammeItem item, bool isDark) {
+    final isHighlight = item.type == 'highlight' || item.type == 'gala';
+    final borderColor = isHighlight ? AppTheme.gold : (isDark ? AppTheme.darkBorder : AppTheme.border);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? (bgColor != null ? AppTheme.gold.withValues(alpha: 0.08) : AppTheme.darkCard)
-            : (bgColor ?? AppTheme.white),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(
-            color: leftColor ?? (isDark ? Colors.grey.shade700 : AppTheme.border),
-            width: 3,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.time.isNotEmpty)
-              Text(item.time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.teal)),
-            if (item.time.isNotEmpty) const SizedBox(height: 4),
-            if (item.group != null && item.group!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(item.group!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.teal)),
-              ),
-            Text(item.title, style: TextStyle(fontSize: 14, height: 1.45, color: isDark ? Colors.grey[300] : AppTheme.textColor)),
-            if (item.sub != null && item.sub!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.black.withValues(alpha: 0.2) : AppTheme.bgColor.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(item.sub!, style: TextStyle(fontSize: 13, height: 1.5, color: isDark ? Colors.grey[400] : AppTheme.textMid)),
-              ),
-            ],
-          ],
-        ),
-      ),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: isDark ? AppTheme.darkCard : Colors.white, borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor), boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (item.time.isNotEmpty) Text(item.time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isHighlight ? AppTheme.gold : AppTheme.teal)),
+        const SizedBox(height: 4),
+        Text(item.title, style: TextStyle(fontSize: 14, color: isDark ? Colors.white : AppTheme.charcoal, height: 1.4)),
+        if (item.group.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6),
+          child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppTheme.teal.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+            child: Text(item.group, style: TextStyle(fontSize: 11, color: AppTheme.teal)))),
+        if (item.sub.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(item.sub, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5))),
+      ]),
     );
   }
 }

@@ -1,253 +1,90 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
-import '../../data/models/models.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  Timer? _timer;
-  Duration _remaining = Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _tick() {
-    final content = ref.read(contentProvider);
-    if (content.data == null) return;
-    final target = DateTime.tryParse(content.data!.event.targetDate);
-    if (target == null) return;
-    final now = DateTime.now();
-    if (target.isAfter(now)) {
-      setState(() => _remaining = target.difference(now));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final content = ref.watch(contentProvider);
-
-    return RefreshIndicator(
-      color: AppTheme.teal,
-      onRefresh: () =>
-          ref.read(contentProvider.notifier).loadContent(forceRefresh: true),
-      child: content.data == null
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppTheme.teal),
-                  SizedBox(height: 16),
-                  Text('Loading...', style: TextStyle(color: AppTheme.textMid, fontSize: 14)),
-                ],
-              ),
-            )
-          : _buildContent(content.data!),
-    );
-  }
-
-  Widget _buildContent(SiteData data) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final siteAsync = ref.watch(siteDataProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(child: _buildHero(data, isDark)),
-        if (_remaining > Duration.zero)
-          SliverToBoxAdapter(child: _buildCountdown(isDark)),
-        if (data.updates.isNotEmpty) ...[
-          _sectionHeader('Trip Updates', Icons.campaign_outlined),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (ctx, i) => _buildUpdateCard(data.updates[i], isDark),
-              childCount: data.updates.length,
-            ),
-          ),
-        ],
-        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-      ],
-    );
-  }
+    return siteAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const Center(child: Text('Failed to load content')),
+      data: (site) {
+        if (site == null) return const Center(child: Text('No content'));
+        final ev = site.event;
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(siteDataProvider),
+          child: ListView(children: [
+            // ─── Hero ───
+            SizedBox(height: 440, child: Stack(children: [
+              // Background image from API
+              SizedBox(width: double.infinity, height: 440,
+                child: ev.heroImage.isNotEmpty
+                  ? CachedNetworkImage(imageUrl: ev.heroImage, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: AppTheme.tealDark))
+                  : Image.asset('assets/cover-bg.jpg', fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppTheme.tealDark))),
+              // Overlay
+              Container(width: double.infinity, height: 440,
+                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [const Color(0xFF1A3330).withValues(alpha: 0.55), const Color(0xFF1A3330).withValues(alpha: 0.45), const Color(0xFF0F1F1D).withValues(alpha: 0.60)]))),
+              // Content
+              SizedBox(width: double.infinity, height: 440, child: SafeArea(bottom: false,
+                child: Padding(padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
+                    const SizedBox(height: 16),
+                    if (ev.badge.isNotEmpty) Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.goldLight.withValues(alpha: 0.5))),
+                      child: Text(ev.badge, style: const TextStyle(color: AppTheme.goldLight, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600))),
+                    const SizedBox(height: 14),
+                    if (ev.name.isNotEmpty) Text(ev.name, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
+                    const SizedBox(height: 6),
+                    if (ev.subtitle.isNotEmpty) Text(ev.subtitle, style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 1)),
+                    const SizedBox(height: 12),
+                    if (ev.dates.isNotEmpty) Text(ev.dates, style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                  ])))),
+            ])),
 
-  Widget _buildHero(SiteData data, bool isDark) {
-    return Stack(
-      children: [
-        // Background image from bundled asset
-        SizedBox(
-          width: double.infinity,
-          height: 440,
-          child: Image.asset(
-            'assets/cover-bg.jpg',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(height: 440, color: AppTheme.tealDark),
-          ),
-        ),
-
-        // Dark overlay
-        Container(
-          width: double.infinity,
-          height: 440,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF1A3330).withValues(alpha: 0.55),
-                const Color(0xFF1A3330).withValues(alpha: 0.45),
-                const Color(0xFF0F1F1D).withValues(alpha: 0.60),
-              ],
-            ),
-          ),
-        ),
-
-        // Content
-        SizedBox(
-          width: double.infinity,
-          height: 440,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-
-                  // Logo - no background, no shadow
-                  Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
-                  const SizedBox(height: 16),
-
-                  // Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppTheme.gold.withValues(alpha: 0.5)),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Text(
-                      data.event.badge.toUpperCase(),
-                      style: TextStyle(fontSize: 9, letterSpacing: 2.5, fontWeight: FontWeight.w700, color: AppTheme.goldLight.withValues(alpha: 0.95)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Title
-                  Text(data.event.name, textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, height: 1.15)),
-                  const SizedBox(height: 6),
-
-                  // Gold line
-                  Container(
-                    width: 60, height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [Colors.transparent, AppTheme.gold.withValues(alpha: 0.6), Colors.transparent]),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Subtitle
-                  Text(data.event.subtitle,
-                    style: TextStyle(fontFamily: 'serif', fontSize: 34, fontStyle: FontStyle.italic, color: AppTheme.goldLight.withValues(alpha: 0.95), height: 1.0)),
-                  const SizedBox(height: 14),
-
-                  // Dates - plain text, no background
-                  Text(
-                    data.event.dates,
-                    style: TextStyle(fontSize: 13, letterSpacing: 1.5, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.85)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCountdown(bool isDark) {
-    final d = _remaining.inDays;
-    final h = _remaining.inHours % 24;
-    final m = _remaining.inMinutes % 60;
-    final s = _remaining.inSeconds % 60;
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : AppTheme.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        children: [
-          Text('COUNTDOWN TO DEPARTURE', style: TextStyle(fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.w700, color: AppTheme.gold)),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _cdUnit(d.toString().padLeft(2, '0'), 'DAYS'), _cdSep(),
-              _cdUnit(h.toString().padLeft(2, '0'), 'HRS'), _cdSep(),
-              _cdUnit(m.toString().padLeft(2, '0'), 'MIN'), _cdSep(),
-              _cdUnit(s.toString().padLeft(2, '0'), 'SEC'),
+            // ─── Updates ───
+            if (site.updates.isNotEmpty) ...[
+              Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                child: Text('Trip Updates', style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal))),
+              ...site.updates.map((u) => _updateCard(u, isDark)),
             ],
-          ),
-        ],
-      ),
+            const SizedBox(height: 24),
+          ]),
+        );
+      },
     );
   }
 
-  Widget _cdUnit(String value, String label) => SizedBox(width: 60, child: Column(children: [
-    Text(value, style: const TextStyle(fontFamily: 'serif', fontSize: 28, fontWeight: FontWeight.w700)),
-    Text(label, style: TextStyle(fontSize: 9, letterSpacing: 1.5, color: AppTheme.textLight, fontWeight: FontWeight.w600)),
-  ]));
-
-  Widget _cdSep() => Padding(padding: const EdgeInsets.only(bottom: 14),
-    child: Text(':', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300, color: AppTheme.gold.withValues(alpha: 0.4))));
-
-  Widget _buildUpdateCard(TripUpdate update, bool isDark) {
-    Color tagColor;
-    switch (update.tag.toLowerCase()) {
-      case 'action': tagColor = Colors.orange.shade700; break;
-      case 'reminder': tagColor = AppTheme.teal; break;
-      case 'alert': tagColor = Colors.red.shade600; break;
-      default: tagColor = Colors.blue.shade600;
-    }
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-      child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget _updateCard(dynamic u, bool isDark) {
+    final tagColors = {'Action': Colors.orange, 'Info': Colors.blue, 'Reminder': AppTheme.teal, 'Alert': Colors.red};
+    final color = tagColors[u.tag] ?? AppTheme.teal;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: isDark ? AppTheme.darkCard : Colors.white, borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.border), boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: tagColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
-            child: Text(update.tag, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tagColor))),
-          if (update.pinned) ...[const SizedBox(width: 8), Icon(Icons.push_pin, size: 14, color: AppTheme.gold)],
+          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+            child: Text(u.tag, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
+          if (u.pinned) ...[const SizedBox(width: 8), Icon(Icons.push_pin, size: 14, color: color)],
           const Spacer(),
-          Text(update.date, style: TextStyle(fontSize: 11, color: AppTheme.textLight)),
+          Text(u.date, style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[500] : AppTheme.textLight)),
         ]),
         const SizedBox(height: 10),
-        Text(update.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        Text(u.title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal)),
         const SizedBox(height: 6),
-        Text(update.body, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5)),
-      ])),
+        Text(u.body, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5)),
+      ]),
     );
   }
-
-  SliverToBoxAdapter _sectionHeader(String title, IconData icon) => SliverToBoxAdapter(
-    child: Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-      child: Row(children: [Icon(icon, size: 20, color: AppTheme.gold), const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700))])));
 }
