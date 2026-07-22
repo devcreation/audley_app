@@ -81,7 +81,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
 
   Widget _lockedPanel(String title) {
     return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.teal.withValues(alpha: 0.1)),
+      Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.teal.withOpacity(0.1)),
         child: const Icon(Icons.check, color: AppTheme.teal, size: 28)),
       const SizedBox(height: 16),
       Text('$title submitted', style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700)),
@@ -93,7 +93,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   Widget _lockedToursPanel() {
     if (_formState == FormState_.toursOnly) {
       return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.amber.withValues(alpha: 0.15)),
+        Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.amber.withOpacity(0.15)),
           child: const Icon(Icons.check, color: Colors.amber, size: 24)),
         const SizedBox(height: 16),
         const Text('Your Optional Tours have already been submitted', style: TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.amber), textAlign: TextAlign.center),
@@ -109,7 +109,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
       return Center(child: Text('Complete both forms to see confirmation.', style: TextStyle(color: AppTheme.textMid)));
     }
     return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.gold.withValues(alpha: 0.1)),
+      Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.gold.withOpacity(0.1)),
         child: Icon(Icons.check, color: AppTheme.gold, size: 28)),
       const SizedBox(height: 16),
       const Text('Your details have been submitted', style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700)),
@@ -322,7 +322,7 @@ class _ToursFormState extends State<_ToursForm> with AutomaticKeepAliveClientMix
       const SizedBox(height: 4),
       Text('Select the optional tours you\'d like to join.', style: TextStyle(fontSize: 13, color: AppTheme.textMid)),
       const SizedBox(height: 12),
-      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppTheme.gold.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.gold.withValues(alpha: 0.2))),
+      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppTheme.gold.withOpacity(0.06), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.gold.withOpacity(0.2))),
         child: Text('Please share your interest by 01 August 2026 so we can make the necessary arrangements.', style: TextStyle(fontSize: 13, color: AppTheme.gold, fontWeight: FontWeight.w600))),
       const SizedBox(height: 20),
 

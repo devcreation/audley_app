@@ -99,8 +99,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
                         color: i <= _step
-                            ? AppTheme.teal.withValues(alpha: 0.12)
-                            : Colors.grey.withValues(alpha: 0.1),
+                            ? AppTheme.teal.withOpacity(0.12)
+                            : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: i == _step ? AppTheme.teal : Colors.transparent,

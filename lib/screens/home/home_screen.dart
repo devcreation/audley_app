@@ -31,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
               // Overlay
               Container(width: double.infinity, height: 440,
                 decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [const Color(0xFF1A3330).withValues(alpha: 0.55), const Color(0xFF1A3330).withValues(alpha: 0.45), const Color(0xFF0F1F1D).withValues(alpha: 0.60)]))),
+                  colors: [const Color(0xFF1A3330).withOpacity(0.55), const Color(0xFF1A3330).withOpacity(0.45), const Color(0xFF0F1F1D).withOpacity(0.60)]))),
               // Content
               SizedBox(width: double.infinity, height: 440, child: SafeArea(bottom: false,
                 child: Padding(padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
@@ -40,12 +40,12 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     if (ev.badge.isNotEmpty) Container(
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.goldLight.withValues(alpha: 0.5))),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.goldLight.withOpacity(0.5))),
                       child: Text(ev.badge, style: const TextStyle(color: AppTheme.goldLight, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600))),
                     const SizedBox(height: 14),
                     if (ev.name.isNotEmpty) Text(ev.name, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
                     const SizedBox(height: 6),
-                    if (ev.subtitle.isNotEmpty) Text(ev.subtitle, style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 1)),
+                    if (ev.subtitle.isNotEmpty) Text(ev.subtitle, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8), letterSpacing: 1)),
                     const SizedBox(height: 12),
                     if (ev.dates.isNotEmpty) Text(ev.dates, style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
                   ])))),
@@ -71,10 +71,10 @@ class HomeScreen extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: isDark ? AppTheme.darkCard : Colors.white, borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.border), boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)]),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.border), boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
             child: Text(u.tag, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
           if (u.pinned) ...[const SizedBox(width: 8), Icon(Icons.push_pin, size: 14, color: color)],
           const Spacer(),

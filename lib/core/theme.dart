@@ -27,6 +27,7 @@ class AppTheme {
   static const Color darkSurface = Color(0xFF1E1E1E);
   static const Color darkBackground = Color(0xFF121212);
   static const Color darkCard = Color(0xFF2A2A2A);
+  static const Color darkBorder = Color(0xFF3A3A3A);
 
   // ─── Light Theme ──────────────────────────────────────────
   static ThemeData lightTheme = ThemeData(
