@@ -57,6 +57,20 @@ class HomeScreen extends ConsumerWidget {
                 child: Text('Trip Updates', style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal))),
               ...site.updates.map((u) => _updateCard(u, isDark)),
             ],
+            // ─── Sponsors ───
+            if (site.sponsors.isNotEmpty) ...[
+              Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Center(child: Text('Our Partners', style: TextStyle(fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[500] : AppTheme.textLight)))),
+              SizedBox(height: 60, child: ListView.builder(
+                scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: site.sponsors.length,
+                itemBuilder: (_, i) {
+                  final s = site.sponsors[i];
+                  return Padding(padding: const EdgeInsets.only(right: 24),
+                    child: CachedNetworkImage(imageUrl: s.image, height: 40, fit: BoxFit.contain,
+                      errorWidget: (_, __, ___) => const SizedBox()));
+                })),
+            ],
             const SizedBox(height: 24),
           ]),
         );

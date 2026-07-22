@@ -76,6 +76,14 @@ class TripUpdate {
     pinned: j['pinned'] ?? false, tag: j['tag']??'', date: j['date']??'', title: j['title']??'', body: j['body']??'');
 }
 
+
+// ─── Sponsor ────────────────────────────────────────────────
+class Sponsor {
+  final String name, image;
+  Sponsor({this.name='', this.image=''});
+  factory Sponsor.fromJson(Map<String, dynamic> j) => Sponsor(name: j['name']??'', image: j['image']??'');
+}
+
 // ─── Full SiteData ──────────────────────────────────────────
 class SiteData {
   final EventInfo event;
@@ -85,11 +93,12 @@ class SiteData {
   final Contacts contacts;
   final List<FaqItem> faqs;
   final List<TripUpdate> updates;
+  final List<Sponsor> sponsors;
   final String? travelGuidelinesUrl;
 
   SiteData({required this.event, required this.programme, required this.hotels,
     required this.fleet, required this.contacts, required this.faqs,
-    required this.updates, this.travelGuidelinesUrl});
+    required this.updates, required this.sponsors, this.travelGuidelinesUrl});
 
   factory SiteData.fromJson(Map<String, dynamic> j) => SiteData(
     event: EventInfo.fromJson(j['event'] ?? {}),
@@ -99,6 +108,7 @@ class SiteData {
     contacts: Contacts.fromJson(j['contacts'] ?? {}),
     faqs: (j['faqs'] as List?)?.map((f) => FaqItem.fromJson(f)).toList() ?? [],
     updates: (j['updates'] as List?)?.map((u) => TripUpdate.fromJson(u)).toList() ?? [],
+    sponsors: (j['sponsors'] as List?)?.map((s) => Sponsor.fromJson(s)).toList() ?? [],
     travelGuidelinesUrl: j['travel_guidelines_url'],
   );
 }

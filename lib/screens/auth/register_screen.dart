@@ -13,6 +13,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  final _jobTitleCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -23,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _jobTitleCtrl.dispose();
     _emailCtrl.dispose();
     _mobileCtrl.dispose();
     _passCtrl.dispose();
@@ -37,7 +39,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final result = await ref.read(authProvider.notifier).register(
           _nameCtrl.text.trim(),
-          '',
+          _jobTitleCtrl.text.trim(),
           _emailCtrl.text.trim(),
           _mobileCtrl.text.trim(),
           _passCtrl.text,
@@ -91,6 +93,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   validator: (v) =>
                       (v == null || v.trim().length < 2) ? 'Name required' : null,
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: _jobTitleCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Job Title',
+                    prefixIcon: Icon(Icons.work_outline, size: 20),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Job title required' : null,
                 ),
                 const SizedBox(height: 14),
 
