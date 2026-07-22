@@ -41,7 +41,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(status: AuthStatus.unauthenticated, isLoading: true);
     final result = await _api.login(email, password);
     if (result['success'] == true) {
-      final token = result['token']?.toString() ?? result['data']?['token']?.toString() ?? '';
+      final token = result['api_token']?.toString() ?? result['token']?.toString() ?? result['data']?['token']?.toString() ?? '';
       await LocalStorage.setString(AppConstants.tokenKey, token);
       state = AuthState(status: AuthStatus.authenticated);
       _ref.invalidate(siteDataProvider);
@@ -63,6 +63,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(status: AuthStatus.unauthenticated);
   }
 }
+
+// ─── App Config (NO AUTH — for login/register branding) ─────
+final appConfigProvider = FutureProvider<AppConfig?>((ref) async {
+  final api = ApiClient();
+  final result = await api.getAppConfig();
+  if (result['success'] == true) {
+    return AppConfig.fromJson(result);
+  }
+  return null;
+});
 
 // ─── Site Data (fully dynamic from API) ─────────────────────
 final siteDataProvider = FutureProvider<SiteData?>((ref) async {

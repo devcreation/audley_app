@@ -10,7 +10,12 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final siteAsync = ref.watch(siteDataProvider);
+    final config = ref.watch(appConfigProvider).valueOrNull;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // UI strings from API
+    final updatesTitle = config?.uiString('section_updates', 'Trip Updates') ?? 'Trip Updates';
+    final partnersTitle = config?.uiString('section_partners', 'Our Partners') ?? 'Our Partners';
 
     return siteAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -23,16 +28,13 @@ class HomeScreen extends ConsumerWidget {
           child: ListView(children: [
             // ─── Hero ───
             SizedBox(height: 440, child: Stack(children: [
-              // Background image from API
               SizedBox(width: double.infinity, height: 440,
                 child: ev.heroImage.isNotEmpty
                   ? CachedNetworkImage(imageUrl: ev.heroImage, fit: BoxFit.cover, errorWidget: (_, __, ___) => Container(color: AppTheme.tealDark))
                   : Image.asset('assets/cover-bg.jpg', fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppTheme.tealDark))),
-              // Overlay
               Container(width: double.infinity, height: 440,
                 decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
                   colors: [const Color(0xFF1A3330).withOpacity(0.55), const Color(0xFF1A3330).withOpacity(0.45), const Color(0xFF0F1F1D).withOpacity(0.60)]))),
-              // Content
               SizedBox(width: double.infinity, height: 440, child: SafeArea(bottom: false,
                 child: Padding(padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -51,16 +53,16 @@ class HomeScreen extends ConsumerWidget {
                   ])))),
             ])),
 
-            // ─── Updates ───
+            // ─── Updates (title from API) ───
             if (site.updates.isNotEmpty) ...[
               Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: Text('Trip Updates', style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal))),
+                child: Text(updatesTitle, style: TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal))),
               ...site.updates.map((u) => _updateCard(u, isDark)),
             ],
-            // ─── Sponsors ───
+            // ─── Sponsors (title from API) ───
             if (site.sponsors.isNotEmpty) ...[
               Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Center(child: Text('Our Partners', style: TextStyle(fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[500] : AppTheme.textLight)))),
+                child: Center(child: Text(partnersTitle, style: TextStyle(fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600, color: isDark ? Colors.grey[500] : AppTheme.textLight)))),
               SizedBox(height: 60, child: ListView.builder(
                 scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: site.sponsors.length,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import 'register_screen.dart';
@@ -47,7 +48,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final configAsync = ref.watch(appConfigProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Extract branding from API (fallback to empty strings while loading)
+    final config = configAsync.valueOrNull;
+    final eventName = config?.event.name ?? '';
+    final eventSubtitle = config?.event.subtitle ?? '';
+    final loginSubtitle = config?.uiString('login_subtitle', 'Sign in to your account') ?? 'Sign in to your account';
+    final logoUrl = config?.logoUrl ?? '';
 
     return Scaffold(
       body: SafeArea(
@@ -61,37 +70,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // Logo - transparent background, no border
-                  Image.asset(
-                    'assets/logo.png',
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.contain,
-                  ),
+                  // Logo — from API with bundled fallback
+                  if (logoUrl.isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: logoUrl,
+                      width: 100, height: 100, fit: BoxFit.contain,
+                      errorWidget: (_, __, ___) => Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
+                    )
+                  else
+                    Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
                   const SizedBox(height: 20),
 
-                  Text(
-                    "Audley Achievers'",
-                    style: TextStyle(
-                      fontFamily: 'serif',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : AppTheme.charcoal,
+                  // Event name from API
+                  if (eventName.isNotEmpty)
+                    Text(
+                      eventName,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'serif',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppTheme.charcoal,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 4),
-                  Text(
-                    'Incredible India 2026',
-                    style: TextStyle(
-                      fontSize: 13,
-                      letterSpacing: 1.5,
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w600,
+
+                  // Event subtitle from API
+                  if (eventSubtitle.isNotEmpty)
+                    Text(
+                      eventSubtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        letterSpacing: 1.5,
+                        color: AppTheme.gold,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 8),
+
+                  // Login subtitle from API
                   Text(
-                    'Sign in to your account',
+                    loginSubtitle,
                     style: TextStyle(
                       fontSize: 14,
                       color: isDark ? Colors.grey[400] : AppTheme.textMid,
@@ -126,9 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outline, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscure
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                           size: 20,
                         ),
                         onPressed: () => setState(() => _obscure = !_obscure),

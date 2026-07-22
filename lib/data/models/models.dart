@@ -1,3 +1,27 @@
+// ─── App Config (unauthenticated — branding for login/register) ─────
+class AppConfig {
+  final String appName;
+  final String logoUrl;
+  final EventInfo event;
+  final Map<String, String> ui;
+
+  AppConfig({this.appName = '', this.logoUrl = '', required this.event, this.ui = const {}});
+
+  factory AppConfig.fromJson(Map<String, dynamic> j) {
+    final uiRaw = j['ui'] as Map? ?? {};
+    final uiMap = <String, String>{};
+    uiRaw.forEach((k, v) => uiMap[k.toString()] = v?.toString() ?? '');
+    return AppConfig(
+      appName: j['app_name']?.toString() ?? '',
+      logoUrl: j['logo_url']?.toString() ?? '',
+      event: EventInfo.fromJson(Map<String, dynamic>.from(j['event'] ?? {})),
+      ui: uiMap,
+    );
+  }
+
+  String uiString(String key, [String fallback = '']) => ui[key] ?? fallback;
+}
+
 // ─── Event Info ─────────────────────────────────────────────
 class EventInfo {
   final String name, badge, subtitle, dates, targetDate, heroImage;

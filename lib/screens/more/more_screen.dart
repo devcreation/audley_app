@@ -11,7 +11,13 @@ class MoreScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final siteAsync = ref.watch(siteDataProvider);
+    final config = ref.watch(appConfigProvider).valueOrNull;
     final isDark = ref.watch(darkModeProvider);
+
+    // UI strings from API
+    final emergencyTitle = config?.uiString('section_emergency', 'Emergency Helpline') ?? 'Emergency Helpline';
+    final contactsTitle = config?.uiString('section_contacts', 'Contact Directory') ?? 'Contact Directory';
+    final hotelsTitle = config?.uiString('section_hotels', 'Hotel Contacts') ?? 'Hotel Contacts';
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -25,13 +31,13 @@ class MoreScreen extends ConsumerWidget {
             // Emergency
             Card(color: Colors.red.shade50, child: ListTile(
               leading: const Icon(Icons.emergency, color: Colors.red),
-              title: const Text('Emergency Helpline', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
+              title: Text(emergencyTitle, style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
               subtitle: Text(c.emergency, style: const TextStyle(color: Colors.red)),
               onTap: () => launchUrl(Uri.parse('tel:${c.emergency}')))),
             const SizedBox(height: 16),
 
             // Contact directory
-            Text('Contact Directory', style: TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal)),
+            Text(contactsTitle, style: TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal)),
             const SizedBox(height: 8),
             if (c.email.isNotEmpty) ListTile(leading: const Icon(Icons.email, color: AppTheme.teal), title: Text(c.email), onTap: () => launchUrl(Uri.parse('mailto:${c.email}'))),
             ...c.people.map((p) => ListTile(leading: const Icon(Icons.person, color: AppTheme.teal),
@@ -39,7 +45,7 @@ class MoreScreen extends ConsumerWidget {
               onTap: () => launchUrl(Uri.parse('tel:${p.phone}')))),
 
             const SizedBox(height: 16),
-            Text('Hotel Contacts', style: TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal)),
+            Text(hotelsTitle, style: TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.charcoal)),
             const SizedBox(height: 8),
             ...c.hotelContacts.map((h) => Card(child: ListTile(
               title: Text(h.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -48,7 +54,6 @@ class MoreScreen extends ConsumerWidget {
               onTap: () => launchUrl(Uri.parse('tel:${h.phone}'))))),
 
             const SizedBox(height: 24),
-            // Dark mode & sign out
             SwitchListTile(title: const Text('Dark Mode'), secondary: const Icon(Icons.dark_mode),
               value: isDark, onChanged: (_) => ref.read(darkModeProvider.notifier).toggle()),
             const Divider(),

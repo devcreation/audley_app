@@ -23,12 +23,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _jobTitleCtrl.dispose();
-    _emailCtrl.dispose();
-    _mobileCtrl.dispose();
-    _passCtrl.dispose();
-    _confirmCtrl.dispose();
+    _nameCtrl.dispose(); _jobTitleCtrl.dispose(); _emailCtrl.dispose();
+    _mobileCtrl.dispose(); _passCtrl.dispose(); _confirmCtrl.dispose();
     super.dispose();
   }
 
@@ -36,38 +32,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() => _loading = true);
-
     final result = await ref.read(authProvider.notifier).register(
-          _nameCtrl.text.trim(),
-          _jobTitleCtrl.text.trim(),
-          _emailCtrl.text.trim(),
-          _mobileCtrl.text.trim(),
-          _passCtrl.text,
-        );
-
+      _nameCtrl.text.trim(), _jobTitleCtrl.text.trim(),
+      _emailCtrl.text.trim(), _mobileCtrl.text.trim(), _passCtrl.text,
+    );
     setState(() => _loading = false);
     if (!mounted) return;
-
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Registration successful!'),
-          backgroundColor: AppTheme.teal,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Registration successful!'), backgroundColor: AppTheme.teal));
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Registration failed'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Registration failed'), backgroundColor: Colors.red.shade700));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Fetch subtitle from API
+    final config = ref.watch(appConfigProvider).valueOrNull;
+    final subtitle = config?.uiString('register_subtitle', '') ?? '';
+
     return Scaffold(
       appBar: AppBar(title: const Text('Create Account')),
       body: SafeArea(
@@ -78,120 +62,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Join us for an experience of a lifetime in Incredible India.',
-                  style: TextStyle(fontSize: 14, color: AppTheme.textMid),
-                ),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle, style: const TextStyle(fontSize: 14, color: AppTheme.textMid)),
                 const SizedBox(height: 24),
-
-                TextFormField(
-                  controller: _nameCtrl,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline, size: 20),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().length < 2) ? 'Name required' : null,
-                ),
+                TextFormField(controller: _nameCtrl, textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline, size: 20)),
+                  validator: (v) => (v == null || v.trim().length < 2) ? 'Name required' : null),
                 const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: _jobTitleCtrl,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Job Title',
-                    prefixIcon: Icon(Icons.work_outline, size: 20),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Job title required' : null,
-                ),
+                TextFormField(controller: _jobTitleCtrl, textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'Job Title', prefixIcon: Icon(Icons.work_outline, size: 20)),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Job title required' : null),
                 const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Email Address',
-                    prefixIcon: Icon(Icons.email_outlined, size: 20),
-                  ),
-                  validator: (v) {
-                    if (v == null || !v.contains('@')) return 'Valid email required';
-                    return null;
-                  },
-                ),
+                TextFormField(controller: _emailCtrl, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined, size: 20)),
+                  validator: (v) { if (v == null || !v.contains('@')) return 'Valid email required'; return null; }),
                 const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: _mobileCtrl,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Mobile Number',
-                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().length < 6) ? 'Mobile required' : null,
-                ),
+                TextFormField(controller: _mobileCtrl, keyboardType: TextInputType.phone, textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: 'Mobile Number', prefixIcon: Icon(Icons.phone_outlined, size: 20)),
+                  validator: (v) => (v == null || v.trim().length < 6) ? 'Mobile required' : null),
                 const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: _passCtrl,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          size: 20),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                    helperText: '8+ chars, upper, lower, number, special',
-                    helperMaxLines: 2,
-                  ),
+                TextFormField(controller: _passCtrl, obscureText: _obscure, textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(labelText: 'Password', prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    suffixIcon: IconButton(icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20), onPressed: () => setState(() => _obscure = !_obscure)),
+                    helperText: '8+ chars, upper, lower, number, special', helperMaxLines: 2),
                   validator: (v) {
                     if (v == null || v.length < 8) return 'Min 8 characters';
                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Need uppercase letter';
                     if (!RegExp(r'[a-z]').hasMatch(v)) return 'Need lowercase letter';
                     if (!RegExp(r'[0-9]').hasMatch(v)) return 'Need a number';
-                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) {
-                      return 'Need a special character';
-                    }
+                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Need a special character';
                     return null;
-                  },
-                ),
+                  }),
                 const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: _confirmCtrl,
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm Password',
-                    prefixIcon: Icon(Icons.lock_outline, size: 20),
-                  ),
-                  validator: (v) =>
-                      v != _passCtrl.text ? 'Passwords do not match' : null,
-                ),
+                TextFormField(controller: _confirmCtrl, obscureText: true, textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(labelText: 'Confirm Password', prefixIcon: Icon(Icons.lock_outline, size: 20)),
+                  validator: (v) => v != _passCtrl.text ? 'Passwords do not match' : null),
                 const SizedBox(height: 28),
-
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _register,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white),
-                          )
-                        : const Text('CREATE ACCOUNT'),
-                  ),
-                ),
+                SizedBox(height: 50, child: ElevatedButton(
+                  onPressed: _loading ? null : _register,
+                  child: _loading
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                    : const Text('CREATE ACCOUNT'))),
               ],
             ),
           ),

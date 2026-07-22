@@ -57,10 +57,26 @@ class ApiClient {
     } on DioException catch (e) { return _err(e); }
   }
 
+  // ─── App Config (NO AUTH - for login/register branding) ───
+  Future<Map<String, dynamic>> getAppConfig() async {
+    try {
+      final r = await _dio.get('/content.php', queryParameters: {'action': 'get_app_config'});
+      return Map<String, dynamic>.from(r.data);
+    } on DioException catch (e) { return _err(e); }
+  }
+
   // ─── Content ──────────────────────────────────────
   Future<Map<String, dynamic>> getSiteData() async {
     try {
       final r = await _dio.get('/content.php', queryParameters: {'action': 'get_site_data'});
+      return Map<String, dynamic>.from(r.data);
+    } on DioException catch (e) { return _err(e); }
+  }
+
+  // ─── Form Config (dynamic participant + tour options) ────
+  Future<Map<String, dynamic>> getFormConfig() async {
+    try {
+      final r = await _dio.get('/forms.php', queryParameters: {'action': 'get_form_config'});
       return Map<String, dynamic>.from(r.data);
     } on DioException catch (e) { return _err(e); }
   }
