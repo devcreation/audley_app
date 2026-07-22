@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/constants.dart';
 import '../data/api_client.dart';
 import '../data/local_storage.dart';
 import '../data/models/models.dart';
@@ -6,8 +7,8 @@ import '../data/models/models.dart';
 // ─── Dark Mode ──────────────────────────────────────────────
 final darkModeProvider = StateNotifierProvider<DarkModeNotifier, bool>((ref) => DarkModeNotifier());
 class DarkModeNotifier extends StateNotifier<bool> {
-  DarkModeNotifier() : super(LocalStorage.getDarkMode());
-  void toggle() { state = !state; LocalStorage.setDarkMode(state); }
+  DarkModeNotifier() : super(LocalStorage.getBool(AppConstants.darkModeKey));
+  void toggle() { state = !state; LocalStorage.setBool(AppConstants.darkModeKey, state); }
 }
 
 // ─── Auth ───────────────────────────────────────────────────
@@ -28,7 +29,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> checkAuth() async {
     state = AuthState(status: AuthStatus.unknown, isLoading: true);
-    final token = LocalStorage.getToken();
+    final token = LocalStorage.getString(AppConstants.tokenKey);
     if (token != null && token.isNotEmpty) {
       state = AuthState(status: AuthStatus.authenticated);
     } else {
@@ -40,18 +41,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(status: AuthStatus.unauthenticated, isLoading: true);
     final result = await _api.login(email, password);
     if (result['success'] == true) {
-      final token = result['token'] ?? result['data']?['token'] ?? '';
-      await LocalStorage.setToken(token);
+      final token = result['token']?.toString() ?? result['data']?['token']?.toString() ?? '';
+      await LocalStorage.setString(AppConstants.tokenKey, token);
       state = AuthState(status: AuthStatus.authenticated);
       _ref.invalidate(siteDataProvider);
       return true;
     }
-    state = AuthState(status: AuthStatus.unauthenticated, error: result['message']);
+    state = AuthState(status: AuthStatus.unauthenticated, error: result['message']?.toString());
     return false;
   }
 
+  Future<Map<String, dynamic>> register(String fullName, String jobTitle, String email, String mobile, String password) async {
+    state = AuthState(status: AuthStatus.unauthenticated, isLoading: true);
+    final result = await _api.register(fullName, jobTitle, email, mobile, password);
+    state = AuthState(status: AuthStatus.unauthenticated);
+    return result;
+  }
+
   Future<void> logout() async {
-    await LocalStorage.clearToken();
+    await LocalStorage.delete(AppConstants.tokenKey);
     state = AuthState(status: AuthStatus.unauthenticated);
   }
 }
@@ -61,7 +69,7 @@ final siteDataProvider = FutureProvider<SiteData?>((ref) async {
   final api = ApiClient();
   final result = await api.getSiteData();
   if (result['success'] == true && result['data'] != null) {
-    return SiteData.fromJson(result['data']);
+    return SiteData.fromJson(Map<String, dynamic>.from(result['data']));
   }
   return null;
 });

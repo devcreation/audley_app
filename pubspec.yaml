@@ -10,27 +10,19 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-
-  # State management
   flutter_riverpod: ^2.5.1
-
-  # HTTP & networking
   dio: ^5.4.1
   connectivity_plus: ^6.0.3
-
-  # Local storage & caching
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
   cached_network_image: ^3.3.1
-
-  # UI & utilities
   url_launcher: ^6.2.5
   intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:

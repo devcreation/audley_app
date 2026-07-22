@@ -60,7 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
     setState(() => _loading = true);
-    final result = await _api.resetPassword(_resetToken, _passCtrl.text);
+    final result = await _api.resetPassword(_email, _resetToken, _passCtrl.text);
     setState(() => _loading = false);
 
     if (result['success'] == true) {

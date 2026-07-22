@@ -16,12 +16,12 @@ class FormsScreen extends ConsumerStatefulWidget {
   ConsumerState<FormsScreen> createState() => _FormsScreenState();
 }
 
-enum FormState_ { loading, neitherSubmitted, pinfoOnly, toursOnly, bothSubmitted }
+enum RegistrationState { loading, neitherSubmitted, pinfoOnly, toursOnly, bothSubmitted }
 
 class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
   final _api = ApiClient();
-  FormState_ _formState = FormState_.loading;
+  RegistrationState _formState = RegistrationState.loading;
   Map<String, dynamic>? _pinfoData;
   Map<String, dynamic>? _toursData;
   Map<String, dynamic> _avail = {};
@@ -32,7 +32,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   void dispose() { _tabCtrl.dispose(); super.dispose(); }
 
   Future<void> _loadAll() async {
-    setState(() => _formState = FormState_.loading);
+    setState(() => _formState = RegistrationState.loading);
     try {
       final results = await Future.wait([_api.getParticipantInfo(), _api.getOptionalTours(), _api.getTourAvailability()]);
       final pRes = results[0]; final tRes = results[1]; final aRes = results[2];
@@ -48,28 +48,28 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
       }
       if (aRes['success'] == true && aRes['data'] != null) _avail = Map<String, dynamic>.from(aRes['data']);
 
-      if (pFilled && tFilled) { _formState = FormState_.bothSubmitted; _tabCtrl.animateTo(2); }
-      else if (pFilled && !tFilled) { _formState = FormState_.pinfoOnly; _tabCtrl.animateTo(1); }
-      else if (!pFilled && tFilled) { _formState = FormState_.toursOnly; _tabCtrl.animateTo(0); }
-      else { _formState = FormState_.neitherSubmitted; _tabCtrl.animateTo(0); }
-    } catch (_) { _formState = FormState_.neitherSubmitted; }
+      if (pFilled && tFilled) { _formState = RegistrationState.bothSubmitted; _tabCtrl.animateTo(2); }
+      else if (pFilled && !tFilled) { _formState = RegistrationState.pinfoOnly; _tabCtrl.animateTo(1); }
+      else if (!pFilled && tFilled) { _formState = RegistrationState.toursOnly; _tabCtrl.animateTo(0); }
+      else { _formState = RegistrationState.neitherSubmitted; _tabCtrl.animateTo(0); }
+    } catch (_) { _formState = RegistrationState.neitherSubmitted; }
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final locked0 = _formState == FormState_.bothSubmitted;
-    final locked1 = _formState == FormState_.bothSubmitted || _formState == FormState_.toursOnly;
+    final locked0 = _formState == RegistrationState.bothSubmitted;
+    final locked1 = _formState == RegistrationState.bothSubmitted || _formState == RegistrationState.toursOnly;
     return Scaffold(
       appBar: AppBar(title: const Text('Registration'),
         bottom: TabBar(controller: _tabCtrl, indicatorColor: AppTheme.goldLight, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          onTap: (i) { if ((i == 0 && locked0) || (i == 1 && locked1) || (i == 2 && _formState != FormState_.bothSubmitted)) _tabCtrl.animateTo(_tabCtrl.previousIndex); },
+          onTap: (i) { if ((i == 0 && locked0) || (i == 1 && locked1) || (i == 2 && _formState != RegistrationState.bothSubmitted)) _tabCtrl.animateTo(_tabCtrl.previousIndex); },
           tabs: [
             Tab(child: Opacity(opacity: locked0 ? 0.4 : 1, child: const Text('Participant Info'))),
             Tab(child: Opacity(opacity: locked1 ? 0.4 : 1, child: const Text('Optional Tours'))),
-            Tab(child: Opacity(opacity: _formState == FormState_.bothSubmitted ? 1 : 0.4, child: const Text('Confirmation'))),
+            Tab(child: Opacity(opacity: _formState == RegistrationState.bothSubmitted ? 1 : 0.4, child: const Text('Confirmation'))),
           ])),
-      body: _formState == FormState_.loading
+      body: _formState == RegistrationState.loading
         ? const Center(child: CircularProgressIndicator())
         : TabBarView(controller: _tabCtrl, physics: const NeverScrollableScrollPhysics(), children: [
             locked0 ? _lockedPanel('Participant Info') : _ParticipantForm(data: _pinfoData, onContinue: _onPinfoContinue),
@@ -91,7 +91,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   }
 
   Widget _lockedToursPanel() {
-    if (_formState == FormState_.toursOnly) {
+    if (_formState == RegistrationState.toursOnly) {
       return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.amber.withOpacity(0.15)),
           child: const Icon(Icons.check, color: Colors.amber, size: 24)),
@@ -105,7 +105,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   }
 
   Widget _confirmationPanel() {
-    if (_formState != FormState_.bothSubmitted) {
+    if (_formState != RegistrationState.bothSubmitted) {
       return Center(child: Text('Complete both forms to see confirmation.', style: TextStyle(color: AppTheme.textMid)));
     }
     return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -119,10 +119,10 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
     ])));
   }
 
-  void _onPinfoContinue() { setState(() { _formState = FormState_.pinfoOnly; }); _tabCtrl.animateTo(1); }
+  void _onPinfoContinue() { setState(() { _formState = RegistrationState.pinfoOnly; }); _tabCtrl.animateTo(1); }
 
   Future<void> _onToursSubmit(Map<String, dynamic> toursFields) async {
-    setState(() { _formState = FormState_.bothSubmitted; });
+    setState(() { _formState = RegistrationState.bothSubmitted; });
     _tabCtrl.animateTo(2);
   }
 }

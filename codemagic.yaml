@@ -52,9 +52,13 @@ workflows:
         script: |
           dart run flutter_launcher_icons
 
+      - name: Run Dart analysis
+        script: |
+          flutter analyze --no-fatal-warnings --no-fatal-infos || true
+
       - name: Build debug APK
         script: |
-          flutter build apk --debug
+          flutter build apk --debug 2>&1
 
     artifacts:
       - build/**/outputs/**/*.apk

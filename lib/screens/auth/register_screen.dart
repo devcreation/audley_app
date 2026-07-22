@@ -37,6 +37,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final result = await ref.read(authProvider.notifier).register(
           _nameCtrl.text.trim(),
+          '',
           _emailCtrl.text.trim(),
           _mobileCtrl.text.trim(),
           _passCtrl.text,
