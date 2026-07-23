@@ -153,36 +153,36 @@ class _SponsorMarqueeState extends State<_SponsorMarquee> {
 
   @override
   Widget build(BuildContext context) {
-    // Double the list for seamless loop
     final doubled = [...widget.sponsors, ...widget.sponsors];
     return Container(
       color: widget.isDark ? AppTheme.darkCard : Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      height: 64,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      height: 60,
       child: ListView.builder(
         controller: _sc, scrollDirection: Axis.horizontal, physics: const NeverScrollableScrollPhysics(),
         itemCount: doubled.length,
         itemBuilder: (_, i) {
           final s = doubled[i];
           final h = _logoHeight(s.name);
-          return Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(height: h, child: CachedNetworkImage(imageUrl: s.image, height: h, fit: BoxFit.contain,
-              placeholder: (_, __) => SizedBox(width: h * 2),
-              errorWidget: (_, __, ___) => const SizedBox())));
+          // Center + explicit constraints — horizontal ListView ignores child height,
+          // so we must use Center to prevent cross-axis stretch
+          return Center(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Image.network(s.image, height: h, fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox(width: 40))));
         }),
     );
   }
 
-  /// Match website mobile CSS heights per sponsor
   double _logoHeight(String name) {
     final n = name.toLowerCase();
-    if (n.contains('distant') || n.contains(' df')) return 30;
-    if (n.contains('turkish')) return 52;
+    if (n.contains('distant')) return 30;
+    if (n.contains('turkish')) return 50;
     if (n.contains('british')) return 24;
-    if (n.contains('amadeus')) return 10;
-    if (n.contains('silversea')) return 10;
-    if (n.contains('dept')) return 10;
-    return 18; // default
+    if (n.contains('amadeus')) return 11;
+    if (n.contains('silversea')) return 11;
+    if (n.contains('dept')) return 11;
+    return 18;
   }
 }
 

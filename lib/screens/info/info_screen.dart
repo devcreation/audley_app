@@ -28,9 +28,10 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
     return Scaffold(
       appBar: AppBar(title: const Text('Information'),
         bottom: TabBar(controller: _tabCtrl, indicatorColor: AppTheme.goldLight, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Participant')])),
+          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+          tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Participants')])),
       body: siteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('Failed to load')),
