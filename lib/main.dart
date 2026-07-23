@@ -20,7 +20,7 @@ class AudleyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = ref.watch(darkModeProvider);
     return MaterialApp(
-      title: "Audley Achievers' Incentive",
+      title: "Audley Top Performers Incentive",
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

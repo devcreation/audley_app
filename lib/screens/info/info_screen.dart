@@ -29,7 +29,7 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
       appBar: AppBar(title: const Text('Information'),
         bottom: TabBar(controller: _tabCtrl, indicatorColor: AppTheme.goldLight, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
           isScrollable: true,
-          tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Directory')])),
+          tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Participant')])),
       body: siteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('Failed to load')),
@@ -70,15 +70,6 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
                     Icon(Icons.phone, size: 16, color: AppTheme.teal),
                     const SizedBox(width: 8),
                     Text(phone, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.teal)),
-                  ])),
-              ],
-              if (email.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                InkWell(onTap: () => launchUrl(Uri.parse('mailto:$email')),
-                  child: Row(children: [
-                    Icon(Icons.email, size: 16, color: AppTheme.gold),
-                    const SizedBox(width: 8),
-                    Text(email, style: TextStyle(fontSize: 13, color: AppTheme.gold)),
                   ])),
               ],
               if (h.url.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12),

@@ -1,4 +1,4 @@
-# Audley Achievers — Build Guide
+# Audley Top Performers — Build Guide
 ## From Source Code to APK (Android) & IPA (iOS)
 
 This guide assumes **zero app development experience**. Follow each step exactly.
@@ -254,7 +254,7 @@ This enables push notifications to users' phones.
 
 1. Go to https://console.firebase.google.com/
 2. Click "Add Project"
-3. Name it "Audley Achievers"
+3. Name it "Audley Top Performers"
 4. Follow the setup wizard (you can disable Google Analytics)
 
 ### 5b. Add Android App to Firebase

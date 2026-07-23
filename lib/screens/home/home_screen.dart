@@ -177,12 +177,12 @@ class _SponsorMarqueeState extends State<_SponsorMarquee> {
   double _logoHeight(String name) {
     final n = name.toLowerCase();
     if (n.contains('distant') || n.contains(' df')) return 34;
-    if (n.contains('turkish')) return 48;
+    if (n.contains('turkish')) return 56;
     if (n.contains('british')) return 28;
-    if (n.contains('amadeus')) return 18;
-    if (n.contains('silversea')) return 18;
-    if (n.contains('dept')) return 18;
-    return 24; // default
+    if (n.contains('amadeus')) return 14;
+    if (n.contains('silversea')) return 14;
+    if (n.contains('dept')) return 14;
+    return 22; // default
   }
 }
 
