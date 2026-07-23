@@ -4,6 +4,7 @@ import '../core/theme.dart';
 import 'home/home_screen.dart';
 import 'programme/programme_screen.dart';
 import 'forms/forms_screen.dart';
+import 'info/info_screen.dart';
 import 'contact/contact_screen.dart';
 import 'more/more_screen.dart';
 
@@ -20,6 +21,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     HomeScreen(),
     ProgrammeScreen(),
     FormsScreen(),
+    InfoScreen(),
     ContactScreen(),
     MoreScreen(),
   ];
@@ -35,12 +37,13 @@ class _MainShellState extends ConsumerState<MainShell> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.teal,
         unselectedItemColor: isDark ? Colors.grey[600] : AppTheme.textLight,
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
+        selectedFontSize: 10,
+        unselectedFontSize: 10,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), activeIcon: Icon(Icons.calendar_today), label: 'Programme'),
           BottomNavigationBarItem(icon: Icon(Icons.edit_note_outlined), activeIcon: Icon(Icons.edit_note), label: 'Register'),
+          BottomNavigationBarItem(icon: Icon(Icons.info_outline), activeIcon: Icon(Icons.info), label: 'Info'),
           BottomNavigationBarItem(icon: Icon(Icons.contacts_outlined), activeIcon: Icon(Icons.contacts), label: 'Contact'),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'More'),
         ],

@@ -66,7 +66,9 @@ class HomeScreen extends ConsumerWidget {
                         border: Border.all(color: AppTheme.goldLight.withOpacity(0.5))),
                       child: Text(ev.badge, style: const TextStyle(color: AppTheme.goldLight, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w600))),
                     const SizedBox(height: 14),
-                    if (ev.name.isNotEmpty) Text(ev.name, textAlign: TextAlign.center,
+                    if (ev.name.isNotEmpty || ev.heroTitle.isNotEmpty) Text(
+                      ev.heroTitle.isNotEmpty ? ev.heroTitle : ev.name,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(fontFamily: 'serif', fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
                     const SizedBox(height: 6),
                     if (ev.subtitle.isNotEmpty) Text(ev.subtitle,

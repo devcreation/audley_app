@@ -24,11 +24,11 @@ class AppConfig {
 
 // ─── Event Info ─────────────────────────────────────────────
 class EventInfo {
-  final String name, badge, subtitle, dates, targetDate, heroImage;
-  EventInfo({this.name = '', this.badge = '', this.subtitle = '', this.dates = '', this.targetDate = '', this.heroImage = ''});
+  final String name, badge, subtitle, dates, targetDate, heroImage, heroTitle;
+  EventInfo({this.name = '', this.badge = '', this.subtitle = '', this.dates = '', this.targetDate = '', this.heroImage = '', this.heroTitle = ''});
   factory EventInfo.fromJson(Map<String, dynamic> j) => EventInfo(
     name: j['name'] ?? '', badge: j['badge'] ?? '', subtitle: j['subtitle'] ?? '',
-    dates: j['dates'] ?? '', targetDate: j['targetDate'] ?? '', heroImage: j['hero_image'] ?? '');
+    dates: j['dates'] ?? '', targetDate: j['targetDate'] ?? '', heroImage: j['hero_image'] ?? '', heroTitle: j['hero_title'] ?? '');
 }
 
 // ─── Programme ──────────────────────────────────────────────

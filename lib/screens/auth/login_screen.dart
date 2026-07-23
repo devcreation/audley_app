@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Extract branding from API (fallback to empty strings while loading)
     final config = configAsync.valueOrNull;
-    final eventName = config?.event.name ?? '';
+    final eventName = config?.event.heroTitle.isNotEmpty == true ? config!.event.heroTitle : (config?.event.name ?? '');
     final eventSubtitle = config?.event.subtitle ?? '';
     final loginSubtitle = config?.uiString('login_subtitle', 'Sign in to your account') ?? 'Sign in to your account';
     final logoUrl = config?.logoUrl ?? '';

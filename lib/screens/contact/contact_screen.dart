@@ -13,27 +13,14 @@ class ContactScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Contact')),
       body: siteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('Unable to load contacts')),
         data: (site) {
           if (site == null) return const Center(child: Text('No data'));
           final c = site.contacts;
-          return CustomScrollView(slivers: [
-            // ─── App Bar ───
-            SliverAppBar(
-              expandedHeight: 140, floating: false, pinned: true,
-              backgroundColor: AppTheme.teal,
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Contact', style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w700, fontSize: 20)),
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      colors: [AppTheme.tealDark, AppTheme.teal, AppTheme.tealDark]))),
-              ),
-            ),
-
-            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          return ListView(padding: const EdgeInsets.all(16), children: [
 
               // ─── Emergency Card ───
               Container(
@@ -105,8 +92,7 @@ class ContactScreen extends ConsumerWidget {
                   ]),
                 ),
               const SizedBox(height: 24),
-            ]))),
-          ]);
+            ]);
         },
       ),
     );
