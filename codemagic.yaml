@@ -48,6 +48,10 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Set app display name
+        script: |
+          dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
+
       - name: Generate app icon
         script: |
           dart run flutter_launcher_icons
