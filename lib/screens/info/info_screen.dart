@@ -28,7 +28,8 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
     return Scaffold(
       appBar: AppBar(title: const Text('Information'),
         bottom: TabBar(controller: _tabCtrl, indicatorColor: AppTheme.goldLight, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          isScrollable: true,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 13),
           tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Participant')])),
       body: siteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

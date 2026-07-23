@@ -166,9 +166,9 @@ class _SponsorMarqueeState extends State<_SponsorMarquee> {
           final s = doubled[i];
           final h = _logoHeight(s.name);
           return Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CachedNetworkImage(imageUrl: s.image, height: h, fit: BoxFit.contain,
+            child: SizedBox(height: h, child: CachedNetworkImage(imageUrl: s.image, height: h, fit: BoxFit.contain,
               placeholder: (_, __) => SizedBox(width: h * 2),
-              errorWidget: (_, __, ___) => const SizedBox()));
+              errorWidget: (_, __, ___) => const SizedBox())));
         }),
     );
   }
@@ -176,13 +176,13 @@ class _SponsorMarqueeState extends State<_SponsorMarquee> {
   /// Match website mobile CSS heights per sponsor
   double _logoHeight(String name) {
     final n = name.toLowerCase();
-    if (n.contains('distant') || n.contains(' df')) return 34;
-    if (n.contains('turkish')) return 56;
-    if (n.contains('british')) return 28;
-    if (n.contains('amadeus')) return 14;
-    if (n.contains('silversea')) return 14;
-    if (n.contains('dept')) return 14;
-    return 22; // default
+    if (n.contains('distant') || n.contains(' df')) return 30;
+    if (n.contains('turkish')) return 52;
+    if (n.contains('british')) return 24;
+    if (n.contains('amadeus')) return 10;
+    if (n.contains('silversea')) return 10;
+    if (n.contains('dept')) return 10;
+    return 18; // default
   }
 }
 
