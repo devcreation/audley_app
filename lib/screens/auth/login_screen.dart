@@ -70,15 +70,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // Logo — from API with bundled fallback
-                  if (logoUrl.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: logoUrl,
-                      width: 100, height: 100, fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) => Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
-                    )
-                  else
-                    Image.asset('assets/logo.png', width: 100, height: 100, fit: BoxFit.contain),
+                  // Logo — bundled icon.png
+                  Image.asset('assets/icon.png', width: 110, height: 110, fit: BoxFit.contain),
                   const SizedBox(height: 20),
 
                   // Event name from API

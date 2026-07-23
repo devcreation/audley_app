@@ -122,6 +122,14 @@ class ApiClient {
     } catch (e) { return _err(e); }
   }
 
+  // ─── Participant Directory ────────────────────────
+  Future<Map<String, dynamic>> getParticipants() async {
+    try {
+      final r = await _dio.get('/forms.php', queryParameters: {'action': 'get_participants'});
+      return Map<String, dynamic>.from(r.data);
+    } catch (e) { return _err(e); }
+  }
+
   // ─── Catch ANY error (DioException, TypeError, FormatException, etc.) ───
   Map<String, dynamic> _err(Object e) {
     if (e is DioException) {
