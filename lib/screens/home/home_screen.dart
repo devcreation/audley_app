@@ -82,24 +82,18 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               Container(
                 color: isDark ? AppTheme.darkCard : Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(children: [
-                  Text(partnersTitle.toUpperCase(),
-                    style: TextStyle(fontSize: 10, letterSpacing: 2.5, fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[500] : AppTheme.textLight)),
-                  const SizedBox(height: 12),
-                  SizedBox(height: 50, child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: site.sponsors.length,
-                    itemBuilder: (_, i) {
-                      final s = site.sponsors[i];
-                      return Padding(padding: const EdgeInsets.only(right: 28),
-                        child: CachedNetworkImage(imageUrl: s.image, height: 36, fit: BoxFit.contain,
-                          placeholder: (_, __) => const SizedBox(width: 60),
-                          errorWidget: (_, __, ___) => const SizedBox()));
-                    })),
-                ]),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: SizedBox(height: 50, child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: site.sponsors.length,
+                  itemBuilder: (_, i) {
+                    final s = site.sponsors[i];
+                    return Padding(padding: const EdgeInsets.only(right: 28),
+                      child: CachedNetworkImage(imageUrl: s.image, height: 36, fit: BoxFit.contain,
+                        placeholder: (_, __) => const SizedBox(width: 60),
+                        errorWidget: (_, __, ___) => const SizedBox()));
+                  })),
               ),
             ],
 
