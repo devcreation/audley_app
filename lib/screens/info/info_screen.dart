@@ -37,7 +37,7 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
           return TabBarView(controller: _tabCtrl, children: [
             _hotelsTab(site.hotels, isDark),
             _fleetTab(site.fleet, isDark),
-            _faqTab(site.faqs, isDark),
+            _faqTab(site.faqs, isDark, site.travelGuidelinesUrl),
           ]);
         },
       ),
@@ -78,10 +78,21 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
       });
   }
 
-  Widget _faqTab(List<FaqItem> faqs, bool isDark) {
+  Widget _faqTab(List<FaqItem> faqs, bool isDark, String? guidelinesUrl) {
     final cats = {'all': 'All', 'travel': 'Travel', 'practical': 'Practical', 'health': 'Health', 'culture': 'Culture'};
     final filtered = _faqCat == 'all' ? faqs : faqs.where((f) => f.cat == _faqCat).toList();
     return Column(children: [
+      // Travel Guidelines button
+      if (guidelinesUrl != null && guidelinesUrl.isNotEmpty)
+        Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: SizedBox(width: double.infinity, height: 46,
+            child: ElevatedButton.icon(
+              onPressed: () => launchUrl(Uri.parse(guidelinesUrl), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.picture_as_pdf, size: 20),
+              label: const Text('Download Travel Guidelines', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold, foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))))),
+      // Category chips
       SizedBox(height: 52, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: cats.entries.map((e) {
           final sel = e.key == _faqCat;

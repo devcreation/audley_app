@@ -4,8 +4,8 @@ import '../../core/theme.dart';
 import '../../data/api_client.dart';
 import '../../providers/providers.dart';
 
-/// Registration form — 100% dynamic from website API.
-/// Participant form fields, tour options, labels, seat limits — all from server.
+/// Registration — 3-step flow: Participant Info → Optional Tours → Confirmation
+/// Tours tab locked until Participant Info saved. Confirmation locked until both saved.
 
 class FormsScreen extends ConsumerStatefulWidget {
   const FormsScreen({super.key});
@@ -13,15 +13,13 @@ class FormsScreen extends ConsumerStatefulWidget {
   ConsumerState<FormsScreen> createState() => _FormsScreenState();
 }
 
-enum RegistrationState { loading, neitherSubmitted, pinfoOnly, toursOnly, bothSubmitted }
+enum RegState { loading, neitherDone, pinfoOnly, toursOnly, bothDone }
 
 class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
   final _api = ApiClient();
-  RegistrationState _formState = RegistrationState.loading;
-  Map<String, dynamic>? _pinfoData;
-  Map<String, dynamic>? _toursData;
-  Map<String, dynamic>? _formConfig;
+  RegState _state = RegState.loading;
+  Map<String, dynamic>? _pinfoData, _toursData, _formConfig;
 
   @override
   void initState() { super.initState(); _tabCtrl = TabController(length: 3, vsync: this); _loadAll(); }
@@ -29,108 +27,123 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   void dispose() { _tabCtrl.dispose(); super.dispose(); }
 
   Future<void> _loadAll() async {
-    setState(() => _formState = RegistrationState.loading);
+    setState(() => _state = RegState.loading);
     try {
-      final results = await Future.wait([_api.getParticipantInfo(), _api.getOptionalTours(), _api.getFormConfig()]);
-      bool pFilled = false, tFilled = false;
-
-      if (results[0]['success'] == true && results[0]['data'] != null && (results[0]['data']['full_name'] ?? '').toString().isNotEmpty) {
-        _pinfoData = results[0]['data']; pFilled = true;
+      final res = await Future.wait([_api.getParticipantInfo(), _api.getOptionalTours(), _api.getFormConfig()]);
+      bool pDone = false, tDone = false;
+      if (res[0]['success'] == true && res[0]['data'] != null && (res[0]['data']['full_name'] ?? '').toString().isNotEmpty) {
+        _pinfoData = res[0]['data']; pDone = true;
       }
-      if (results[1]['success'] == true && results[1]['data'] != null) {
-        final d = results[1]['data'];
+      if (res[1]['success'] == true && res[1]['data'] != null) {
+        final d = res[1]['data'];
         if ((d['sept12_choice'] ?? '').toString().isNotEmpty || (d['sept13_yoga'] ?? '').toString().isNotEmpty || (d['sept14_choice'] ?? '').toString().isNotEmpty) {
-          _toursData = d; tFilled = true;
+          _toursData = d; tDone = true;
         }
       }
-      if (results[2]['success'] == true && results[2]['data'] != null) {
-        _formConfig = results[2]['data'];
-      }
-
-      if (pFilled && tFilled) { _formState = RegistrationState.bothSubmitted; _tabCtrl.animateTo(2); }
-      else if (pFilled && !tFilled) { _formState = RegistrationState.pinfoOnly; _tabCtrl.animateTo(1); }
-      else if (!pFilled && tFilled) { _formState = RegistrationState.toursOnly; _tabCtrl.animateTo(0); }
-      else { _formState = RegistrationState.neitherSubmitted; _tabCtrl.animateTo(0); }
-    } catch (_) { _formState = RegistrationState.neitherSubmitted; }
+      if (res[2]['success'] == true && res[2]['data'] != null) _formConfig = res[2]['data'];
+      if (pDone && tDone) { _state = RegState.bothDone; _tabCtrl.animateTo(2); }
+      else if (pDone) { _state = RegState.pinfoOnly; _tabCtrl.animateTo(1); }
+      else if (tDone) { _state = RegState.toursOnly; }
+      else { _state = RegState.neitherDone; }
+    } catch (_) { _state = RegState.neitherDone; }
     setState(() {});
   }
 
-  // Tab labels from API
-  String _tabLabel(String key, String fallback) => (_formConfig?['tabs']?[key] ?? fallback).toString();
+  String _tab(String k, String fb) => (_formConfig?['tabs']?[k] ?? fb).toString();
+  bool get _pinfoLocked => _state == RegState.bothDone;
+  bool get _toursLocked => _state == RegState.bothDone || _state == RegState.neitherDone;
+  bool get _confirmLocked => _state != RegState.bothDone;
 
   @override
   Widget build(BuildContext context) {
-    final locked0 = _formState == RegistrationState.bothSubmitted;
-    final locked1 = _formState == RegistrationState.bothSubmitted || _formState == RegistrationState.toursOnly;
     return Scaffold(
       appBar: AppBar(title: const Text('Registration'),
         bottom: TabBar(controller: _tabCtrl, indicatorColor: AppTheme.goldLight, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          onTap: (i) { if ((i == 0 && locked0) || (i == 1 && locked1) || (i == 2 && _formState != RegistrationState.bothSubmitted)) _tabCtrl.animateTo(_tabCtrl.previousIndex); },
+          onTap: (i) {
+            if (i == 0 && _pinfoLocked) { _tabCtrl.animateTo(_tabCtrl.previousIndex); return; }
+            if (i == 1 && _toursLocked) {
+              _tabCtrl.animateTo(_tabCtrl.previousIndex);
+              if (_state == RegState.neitherDone) _showMsg('Please complete Participant Info first');
+              return;
+            }
+            if (i == 2 && _confirmLocked) {
+              _tabCtrl.animateTo(_tabCtrl.previousIndex);
+              _showMsg('Please complete all forms first');
+              return;
+            }
+          },
           tabs: [
-            Tab(child: Opacity(opacity: locked0 ? 0.4 : 1, child: Text(_tabLabel('tab_pinfo', 'Participant Info')))),
-            Tab(child: Opacity(opacity: locked1 ? 0.4 : 1, child: Text(_tabLabel('tab_tours', 'Optional Tours')))),
-            Tab(child: Opacity(opacity: _formState == RegistrationState.bothSubmitted ? 1 : 0.4, child: Text(_tabLabel('tab_confirm', 'Confirmation')))),
+            Tab(child: _tabItem(_tab('tab_pinfo', 'Participant Info'), !_pinfoLocked, _state != RegState.neitherDone && _state != RegState.loading)),
+            Tab(child: _tabItem(_tab('tab_tours', 'Optional Tours'), !_toursLocked, _state == RegState.bothDone || _state == RegState.toursOnly)),
+            Tab(child: _tabItem(_tab('tab_confirm', 'Confirmation'), !_confirmLocked, _state == RegState.bothDone)),
           ])),
-      body: _formState == RegistrationState.loading
+      body: _state == RegState.loading
         ? const Center(child: CircularProgressIndicator())
         : TabBarView(controller: _tabCtrl, physics: const NeverScrollableScrollPhysics(), children: [
-            locked0 ? _lockedPanel(_formConfig?['confirmation']?['pinfo_locked_title'] ?? 'Submitted', _formConfig?['confirmation']?['pinfo_locked_message'] ?? '') : _ParticipantForm(data: _pinfoData, config: _formConfig?['participant_form'], onContinue: _onPinfoContinue),
-            locked1 ? _lockedToursPanel() : _ToursForm(data: _toursData, config: _formConfig, onBack: () => _tabCtrl.animateTo(0), onSubmit: _onToursSubmit),
-            _confirmationPanel(),
+            _pinfoLocked ? _lockedPanel(Icons.check_circle, AppTheme.teal, _formConfig?['confirmation']?['pinfo_locked_title'] ?? 'Submitted', _formConfig?['confirmation']?['pinfo_locked_message'] ?? 'Your details have been received.')
+              : _PinfoForm(data: _pinfoData, config: _formConfig?['participant_form'], onSaved: _onPinfoSaved),
+            _toursLocked
+              ? (_state == RegState.neitherDone
+                  ? _lockedPanel(Icons.lock_outline, AppTheme.textLight, 'Complete Step 1', 'Fill in your Participant Info to unlock Optional Tours.')
+                  : _lockedPanel(Icons.check_circle, AppTheme.teal, _formConfig?['confirmation']?['tours_locked_title'] ?? 'Submitted', _formConfig?['confirmation']?['tours_locked_message'] ?? ''))
+              : _ToursForm(data: _toursData, config: _formConfig, onBack: () => _tabCtrl.animateTo(0), onSubmit: _onToursSubmit),
+            _confirmPanel(),
           ]),
     );
   }
 
-  Widget _lockedPanel(String title, String message) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.teal.withOpacity(0.1)), child: const Icon(Icons.check, color: AppTheme.teal, size: 28)),
-    const SizedBox(height: 16), Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700)),
-    if (message.isNotEmpty) ...[const SizedBox(height: 8), Text(message, style: TextStyle(fontSize: 14, color: AppTheme.textMid), textAlign: TextAlign.center)]])));
-
-  Widget _lockedToursPanel() {
-    if (_formState == RegistrationState.toursOnly) {
-      final msg = _formConfig?['confirmation']?['tours_only_message'] ?? '';
-      return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.amber.withOpacity(0.15)), child: const Icon(Icons.check, color: Colors.amber, size: 24)),
-        const SizedBox(height: 16), Text(_formConfig?['confirmation']?['tours_locked_title'] ?? 'Tours submitted', style: const TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.amber), textAlign: TextAlign.center),
-        if (msg.isNotEmpty) ...[const SizedBox(height: 8), Text(msg, style: TextStyle(fontSize: 14, color: AppTheme.textMid), textAlign: TextAlign.center)]])));
-    }
-    return _lockedPanel(_formConfig?['confirmation']?['tours_locked_title'] ?? 'Submitted', _formConfig?['confirmation']?['tours_locked_message'] ?? '');
+  Widget _tabItem(String label, bool active, bool done) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (done) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(Icons.check_circle, size: 14, color: active ? AppTheme.goldLight : Colors.white38)),
+      Flexible(child: Text(label, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: active ? null : Colors.white38))),
+    ]);
   }
 
-  Widget _confirmationPanel() {
-    if (_formState != RegistrationState.bothSubmitted) return Center(child: Text(_formConfig?['confirmation']?['incomplete_message'] ?? '', style: TextStyle(color: AppTheme.textMid)));
-    final title = _formConfig?['confirmation']?['title'] ?? '';
-    final msg = _formConfig?['confirmation']?['message'] ?? '';
-    return Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 52, height: 52, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.gold.withOpacity(0.1)), child: Icon(Icons.check, color: AppTheme.gold, size: 28)),
-      const SizedBox(height: 16), Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 10), Text(msg, style: TextStyle(fontSize: 14, color: AppTheme.textMid, height: 1.6), textAlign: TextAlign.center)])));
+  void _showMsg(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+
+  Widget _lockedPanel(IconData icon, Color color, String title, String msg) => Center(child: Padding(padding: const EdgeInsets.all(40),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 56, height: 56, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.1)),
+        child: Icon(icon, color: color, size: 28)),
+      const SizedBox(height: 16),
+      Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+      if (msg.isNotEmpty) ...[const SizedBox(height: 8), Text(msg, style: TextStyle(fontSize: 14, color: AppTheme.textMid, height: 1.5), textAlign: TextAlign.center)],
+    ])));
+
+  Widget _confirmPanel() {
+    if (_state != RegState.bothDone) return _lockedPanel(Icons.hourglass_empty, AppTheme.textLight, 'Almost There', _formConfig?['confirmation']?['incomplete_message'] ?? 'Complete both forms to see your confirmation.');
+    final title = _formConfig?['confirmation']?['title'] ?? 'Registration Complete';
+    final msg = _formConfig?['confirmation']?['message'] ?? 'Thank you! Your details have been submitted successfully.';
+    return Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 64, height: 64, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.gold.withOpacity(0.1)),
+        child: Icon(Icons.celebration, color: AppTheme.gold, size: 32)),
+      const SizedBox(height: 20),
+      Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+      const SizedBox(height: 12),
+      Text(msg, style: TextStyle(fontSize: 14, color: AppTheme.textMid, height: 1.6), textAlign: TextAlign.center),
+    ])));
   }
 
-  void _onPinfoContinue() { setState(() { _formState = RegistrationState.pinfoOnly; }); _tabCtrl.animateTo(1); }
-  Future<void> _onToursSubmit(Map<String, dynamic> f) async { setState(() { _formState = RegistrationState.bothSubmitted; }); _tabCtrl.animateTo(2); }
+  void _onPinfoSaved() { setState(() => _state = RegState.pinfoOnly); _tabCtrl.animateTo(1); }
+  Future<void> _onToursSubmit(Map<String, dynamic> f) async { setState(() => _state = RegState.bothDone); _tabCtrl.animateTo(2); }
 }
 
-// ─── DYNAMIC Participant Info Form ──────────────────────────
-class _ParticipantForm extends StatefulWidget {
-  final Map<String, dynamic>? data;
-  final Map<String, dynamic>? config;
-  final VoidCallback onContinue;
-  const _ParticipantForm({this.data, this.config, required this.onContinue});
+// ─── Participant Info Form ──────────────────────────
+class _PinfoForm extends StatefulWidget {
+  final Map<String, dynamic>? data, config;
+  final VoidCallback onSaved;
+  const _PinfoForm({this.data, this.config, required this.onSaved});
   @override
-  State<_ParticipantForm> createState() => _ParticipantFormState();
+  State<_PinfoForm> createState() => _PinfoFormState();
 }
 
-class _ParticipantFormState extends State<_ParticipantForm> with AutomaticKeepAliveClientMixin {
+class _PinfoFormState extends State<_PinfoForm> with AutomaticKeepAliveClientMixin {
   @override bool get wantKeepAlive => true;
   final _api = ApiClient(); final _formKey = GlobalKey<FormState>();
   bool _loading = false, _certify = false;
-
-  // Dynamic controllers and values keyed by field key
-  final Map<String, TextEditingController> _textCtrl = {};
-  final Map<String, String> _dropdownVal = {};
-  String _chipVal = ''; // for meal_preference
-  String _gender = '';
+  final Map<String, TextEditingController> _ctrl = {};
+  final Map<String, String> _ddVal = {};
+  String _chipVal = '', _gender = '';
 
   @override
   void initState() { super.initState(); _init(); }
@@ -139,76 +152,56 @@ class _ParticipantFormState extends State<_ParticipantForm> with AutomaticKeepAl
     final fields = (widget.config?['fields'] as List?) ?? [];
     final d = widget.data;
     for (final f in fields) {
-      final key = f['key']?.toString() ?? '';
-      final type = f['type']?.toString() ?? '';
-      if (key.startsWith('_')) continue; // headers
-      if (type == 'dropdown') {
-        _dropdownVal[key] = d?[key]?.toString() ?? '';
-        if (key == 'gender') _gender = _dropdownVal[key] ?? '';
-        // Also init "other" text controller if has_other
+      final k = f['key']?.toString() ?? '';
+      final t = f['type']?.toString() ?? '';
+      if (k.startsWith('_')) continue;
+      if (t == 'dropdown') {
+        _ddVal[k] = d?[k]?.toString() ?? '';
+        if (k == 'gender') _gender = _ddVal[k] ?? '';
         if (f['has_other'] == true) {
-          final otherKey = f['other_key']?.toString() ?? '${key}_other';
-          _textCtrl[otherKey] = TextEditingController(text: d?[otherKey]?.toString() ?? '');
+          final ok = f['other_key']?.toString() ?? '${k}_other';
+          _ctrl[ok] = TextEditingController(text: d?[ok]?.toString() ?? '');
         }
-      } else if (type == 'chips') {
-        _chipVal = d?[key]?.toString() ?? '';
-      } else if (type != 'header') {
-        _textCtrl[key] = TextEditingController(text: d?[key]?.toString() ?? '');
-      }
+      } else if (t == 'chips') { _chipVal = d?[k]?.toString() ?? ''; }
+      else if (t != 'header') { _ctrl[k] = TextEditingController(text: d?[k]?.toString() ?? ''); }
     }
   }
 
-  @override
-  void dispose() { _textCtrl.values.forEach((c) => c.dispose()); super.dispose(); }
+  @override void dispose() { _ctrl.values.forEach((c) => c.dispose()); super.dispose(); }
 
-  bool _shouldShow(Map<String, dynamic> field) {
-    final sw = field['show_when'];
-    if (sw == null) return true;
-    final f = sw['field']?.toString() ?? '';
-    final v = sw['value']?.toString() ?? '';
-    if (f == 'gender') return _gender == v;
-    return (_dropdownVal[f] ?? '') == v;
+  bool _show(Map<String, dynamic> f) {
+    final sw = f['show_when']; if (sw == null) return true;
+    final fld = sw['field']?.toString() ?? '', val = sw['value']?.toString() ?? '';
+    return fld == 'gender' ? _gender == val : (_ddVal[fld] ?? '') == val;
   }
 
-  String _resolveLabel(Map<String, dynamic> field) {
-    final base = field['label']?.toString() ?? '';
-    final prefixM = field['label_prefix_male']?.toString();
-    final prefixF = field['label_prefix_female']?.toString();
-    if (prefixM != null && _gender == 'Male') return '$prefixM: $base';
-    if (prefixF != null && _gender == 'Female') return '$prefixF: $base';
-    if (prefixM != null) return '$prefixM: $base'; // default to male numbering
+  String _lbl(Map<String, dynamic> f) {
+    final base = f['label']?.toString() ?? '';
+    final pm = f['label_prefix_male']?.toString(), pf = f['label_prefix_female']?.toString();
+    if (pm != null && _gender == 'Male') return '$pm: $base';
+    if (pf != null && _gender == 'Female') return '$pf: $base';
+    if (pm != null) return '$pm: $base';
     return base;
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_certify) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.config?['certification_text'] ?? 'Please tick the certification'), backgroundColor: Colors.red)); return; }
+    if (!_certify) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Please tick the certification'), backgroundColor: Colors.red)); return; }
     FocusScope.of(context).unfocus(); setState(() => _loading = true);
-
     final body = <String, dynamic>{};
-    final fields = (widget.config?['fields'] as List?) ?? [];
-    for (final f in fields) {
-      final key = f['key']?.toString() ?? '';
-      if (key.startsWith('_')) continue;
-      final type = f['type']?.toString() ?? '';
-      if (type == 'dropdown') {
-        body[key] = _dropdownVal[key] ?? '';
-        if (f['has_other'] == true) {
-          final otherKey = f['other_key']?.toString() ?? '${key}_other';
-          body[otherKey] = _textCtrl[otherKey]?.text.trim() ?? '';
-        }
-      } else if (type == 'chips') {
-        body[key] = _chipVal;
-      } else if (type != 'header') {
-        body[key] = _textCtrl[key]?.text.trim() ?? '';
-      }
+    for (final f in (widget.config?['fields'] as List?) ?? []) {
+      final k = f['key']?.toString() ?? '', t = f['type']?.toString() ?? '';
+      if (k.startsWith('_')) continue;
+      if (t == 'dropdown') { body[k] = _ddVal[k] ?? ''; if (f['has_other'] == true) { final ok = f['other_key']?.toString() ?? '${k}_other'; body[ok] = _ctrl[ok]?.text.trim() ?? ''; } }
+      else if (t == 'chips') { body[k] = _chipVal; }
+      else if (t != 'header') { body[k] = _ctrl[k]?.text.trim() ?? ''; }
     }
     body['source'] = 'app';
-
-    final result = await _api.submitParticipantInfo(body);
-    setState(() => _loading = false); if (!mounted) return;
-    if (result['success'] == true) { widget.onContinue(); }
-    else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Error'), backgroundColor: Colors.red.shade700)); }
+    final r = await _api.submitParticipantInfo(body);
+    setState(() => _loading = false);
+    if (!mounted) return;
+    if (r['success'] == true) { widget.onSaved(); }
+    else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? 'Error'), backgroundColor: Colors.red.shade700)); }
   }
 
   @override
@@ -217,26 +210,18 @@ class _ParticipantFormState extends State<_ParticipantForm> with AutomaticKeepAl
     final fields = (widget.config?['fields'] as List?) ?? [];
     final title = widget.config?['title']?.toString() ?? '';
     final saveBtn = widget.config?['save_button']?.toString() ?? 'SAVE & CONTINUE';
-    final certText = widget.config?['certification_text']?.toString() ?? '';
+    final cert = widget.config?['certification_text']?.toString() ?? '';
 
     return Form(key: _formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
       if (title.isNotEmpty) Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 20, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
-
-      // Render fields dynamically
-      for (final f in fields)
-        if (_shouldShow(Map<String, dynamic>.from(f)))
-          _buildField(Map<String, dynamic>.from(f), isDark),
-
+      for (final f in fields) if (_show(Map<String, dynamic>.from(f))) _field(Map<String, dynamic>.from(f), isDark),
       const SizedBox(height: 8),
-      // Certification checkbox
-      if (certText.isNotEmpty)
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Checkbox(value: _certify, activeColor: AppTheme.teal, onChanged: (v) => setState(() => _certify = v ?? false)),
-          Expanded(child: GestureDetector(onTap: () => setState(() => _certify = !_certify),
-            child: Padding(padding: const EdgeInsets.only(top: 12), child: Text(certText,
-              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5))))),
-        ]),
+      if (cert.isNotEmpty) Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Checkbox(value: _certify, activeColor: AppTheme.teal, onChanged: (v) => setState(() => _certify = v ?? false)),
+        Expanded(child: GestureDetector(onTap: () => setState(() => _certify = !_certify),
+          child: Padding(padding: const EdgeInsets.only(top: 12), child: Text(cert, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : AppTheme.textMid, height: 1.5))))),
+      ]),
       const SizedBox(height: 20),
       SizedBox(height: 50, child: ElevatedButton(onPressed: _loading ? null : _save, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold),
         child: _loading ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
@@ -245,170 +230,120 @@ class _ParticipantFormState extends State<_ParticipantForm> with AutomaticKeepAl
     ]));
   }
 
-  Widget _buildField(Map<String, dynamic> field, bool isDark) {
-    final key = field['key']?.toString() ?? '';
-    final type = field['type']?.toString() ?? '';
-    final label = _resolveLabel(field);
-    final required = field['required'] == true;
-    final placeholder = field['placeholder']?.toString() ?? '';
-    final readOnlyPre = field['readonly_prefilled'] == true && widget.data != null && (_textCtrl[key]?.text.isNotEmpty == true);
-    final maxLines = (field['max_lines'] as int?) ?? 1;
+  Widget _field(Map<String, dynamic> f, bool isDark) {
+    final k = f['key']?.toString() ?? '', t = f['type']?.toString() ?? '';
+    final label = _lbl(f); final req = f['required'] == true;
+    final ph = f['placeholder']?.toString() ?? '';
+    final roPre = f['readonly_prefilled'] == true && widget.data != null && (_ctrl[k]?.text.isNotEmpty == true);
+    final ml = (f['max_lines'] as int?) ?? 1;
 
-    if (type == 'header') {
-      return _lbl(label, required);
-    }
-
-    final widgets = <Widget>[];
-    widgets.add(_lbl(label, required));
-
-    switch (type) {
+    if (t == 'header') return _labelW(label, req);
+    final ws = <Widget>[]; ws.add(_labelW(label, req));
+    switch (t) {
       case 'text': case 'date': case 'email': case 'phone': case 'textarea':
         TextInputType? kb;
-        if (type == 'email') kb = TextInputType.emailAddress;
-        if (type == 'phone') kb = TextInputType.phone;
-        if (type == 'date') kb = TextInputType.datetime;
-        final lines = type == 'textarea' ? (maxLines > 1 ? maxLines : 3) : maxLines;
-        widgets.add(_inp(_textCtrl[key] ?? TextEditingController(), placeholder, keyboard: kb, maxLines: lines, readOnly: readOnlyPre,
-          validator: required ? (v) => (v == null || v.isEmpty) ? 'Required' : null : null));
+        if (t == 'email') kb = TextInputType.emailAddress;
+        if (t == 'phone') kb = TextInputType.phone;
+        if (t == 'date') kb = TextInputType.datetime;
+        ws.add(_inp(_ctrl[k] ?? TextEditingController(), ph, kb: kb, ml: t == 'textarea' ? (ml > 1 ? ml : 3) : ml, ro: roPre, v: req ? (v) => (v == null || v.isEmpty) ? 'Required' : null : null));
         break;
-
       case 'dropdown':
-        final options = (field['options'] as List?)?.map((e) => e.toString()).toList() ?? [];
-        final allOpts = ['', ...options];
-        final val = _dropdownVal[key] ?? '';
-        widgets.add(_dd(allOpts.contains(val) ? val : '', allOpts, 'Select', (v) {
-          setState(() {
-            _dropdownVal[key] = v ?? '';
-            if (key == 'gender') _gender = v ?? '';
-          });
-        }));
-        // "Other" text field
-        if (field['has_other'] == true && (_dropdownVal[key] ?? '').contains('Other')) {
-          final otherKey = field['other_key']?.toString() ?? '${key}_other';
-          widgets.add(_inp(_textCtrl[otherKey] ?? TextEditingController(), field['other_placeholder']?.toString() ?? 'Specify'));
-        }
+        final opts = (f['options'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        final all = ['', ...opts]; final val = _ddVal[k] ?? '';
+        ws.add(_dd(all.contains(val) ? val : '', all, (v) { setState(() { _ddVal[k] = v ?? ''; if (k == 'gender') _gender = v ?? ''; }); }));
+        if (f['has_other'] == true && (_ddVal[k] ?? '').contains('Other'))
+          ws.add(_inp(_ctrl[f['other_key']?.toString() ?? '${k}_other'] ?? TextEditingController(), f['other_placeholder']?.toString() ?? 'Specify'));
         break;
-
       case 'chips':
-        final options = (field['options'] as List?)?.map((e) => e.toString()).toList() ?? [];
-        widgets.add(Padding(padding: const EdgeInsets.only(bottom: 16), child: Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final m in options)
-            ChoiceChip(label: Text(m, style: TextStyle(fontSize: 13, color: _chipVal == m ? Colors.white : (isDark ? Colors.grey[300] : AppTheme.charcoal))),
-              selected: _chipVal == m, selectedColor: AppTheme.teal, backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: _chipVal == m ? AppTheme.teal : AppTheme.border)),
-              onSelected: (_) => setState(() => _chipVal = m)),
+        final opts = (f['options'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        ws.add(Padding(padding: const EdgeInsets.only(bottom: 16), child: Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final m in opts) ChoiceChip(label: Text(m, style: TextStyle(fontSize: 13, color: _chipVal == m ? Colors.white : (isDark ? Colors.grey[300] : AppTheme.charcoal))),
+            selected: _chipVal == m, selectedColor: AppTheme.teal, backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: _chipVal == m ? AppTheme.teal : AppTheme.border)),
+            onSelected: (_) => setState(() => _chipVal = m)),
         ])));
         break;
     }
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: ws);
   }
 
-  Widget _lbl(String t, bool r) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 6), child: RichText(text: TextSpan(style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppTheme.teal), children: [TextSpan(text: t.toUpperCase()), if (r) const TextSpan(text: ' *', style: TextStyle(color: Colors.red))])));
-  Widget _inp(TextEditingController c, String h, {TextInputType? keyboard, int maxLines = 1, bool readOnly = false, String? Function(String?)? validator}) =>
-    Padding(padding: const EdgeInsets.only(bottom: 4), child: TextFormField(controller: c, keyboardType: keyboard, maxLines: maxLines, readOnly: readOnly, validator: validator,
-      style: readOnly ? TextStyle(color: Colors.grey[600]) : null,
-      decoration: InputDecoration(hintText: h, hintStyle: TextStyle(color: AppTheme.textLight, fontSize: 14), filled: readOnly, fillColor: readOnly ? Colors.grey[100] : null)));
-  Widget _dd(String v, List<String> items, String h, void Function(String?) oc) => Padding(padding: const EdgeInsets.only(bottom: 4), child: DropdownButtonFormField<String>(value: items.contains(v) ? v : '', hint: Text(h), items: items.map((s) => DropdownMenuItem(value: s, child: Text(s.isEmpty ? '— Select —' : s))).toList(), onChanged: oc));
+  Widget _labelW(String t, bool r) => Padding(padding: const EdgeInsets.only(top: 12, bottom: 6),
+    child: RichText(text: TextSpan(style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: AppTheme.teal),
+      children: [TextSpan(text: t.toUpperCase()), if (r) const TextSpan(text: ' *', style: TextStyle(color: Colors.red))])));
+  Widget _inp(TextEditingController c, String h, {TextInputType? kb, int ml = 1, bool ro = false, String? Function(String?)? v}) =>
+    Padding(padding: const EdgeInsets.only(bottom: 4), child: TextFormField(controller: c, keyboardType: kb, maxLines: ml, readOnly: ro, validator: v,
+      style: ro ? TextStyle(color: Colors.grey[600]) : null,
+      decoration: InputDecoration(hintText: h, hintStyle: TextStyle(color: AppTheme.textLight, fontSize: 14), filled: ro, fillColor: ro ? Colors.grey[100] : null)));
+  Widget _dd(String v, List<String> items, void Function(String?) oc) => Padding(padding: const EdgeInsets.only(bottom: 4),
+    child: DropdownButtonFormField<String>(value: items.contains(v) ? v : '', hint: const Text('Select'), items: items.map((s) => DropdownMenuItem(value: s, child: Text(s.isEmpty ? '— Select —' : s))).toList(), onChanged: oc));
 }
 
-// ─── Optional Tours — FULLY DYNAMIC from get_form_config API ─
+// ─── Optional Tours Form ──────────────────────────
 class _ToursForm extends StatefulWidget {
-  final Map<String, dynamic>? data;
-  final Map<String, dynamic>? config;
+  final Map<String, dynamic>? data, config;
   final VoidCallback onBack;
   final Future<void> Function(Map<String, dynamic>) onSubmit;
   const _ToursForm({this.data, this.config, required this.onBack, required this.onSubmit});
-  @override
-  State<_ToursForm> createState() => _ToursFormState();
+  @override State<_ToursForm> createState() => _ToursFormState();
 }
 
 class _ToursFormState extends State<_ToursForm> with AutomaticKeepAliveClientMixin {
   @override bool get wantKeepAlive => true;
-  final _api = ApiClient();
-  bool _loading = false;
-  final Map<String, String> _selections = {};
+  final _api = ApiClient(); bool _loading = false;
+  final Map<String, String> _sel = {};
 
-  @override
-  void initState() { super.initState(); _prefill(); }
-
-  void _prefill() {
-    final d = widget.data;
-    if (d == null) return;
-    for (final section in (widget.config?['sections'] as List? ?? [])) {
-      final field = section['field']?.toString() ?? '';
-      final val = d[field]?.toString() ?? '';
-      if (val.isNotEmpty) {
-        _selections[field] = val == 'heritage_walk' ? 'art_walk' : val;
-      }
+  @override void initState() { super.initState(); _prefill(); }
+  void _prefill() { final d = widget.data; if (d == null) return;
+    for (final s in (widget.config?['sections'] as List? ?? [])) {
+      final f = s['field']?.toString() ?? '', v = d[f]?.toString() ?? '';
+      if (v.isNotEmpty) _sel[f] = v == 'heritage_walk' ? 'art_walk' : v;
     }
   }
 
   Map<String, dynamic> get _avail => Map<String, dynamic>.from(widget.config?['availability'] ?? {});
-
-  int _remaining(String sectionKey, String optionId) {
-    final a = _avail[sectionKey]?[optionId]; return a?['remaining'] ?? 999;
-  }
-  int _limit(String sectionKey, String optionId) {
-    final a = _avail[sectionKey]?[optionId]; return a?['limit'] ?? 0;
-  }
-  bool _isAvail(String sectionKey, String field, String optionId) {
-    if (_selections[field] == optionId) return true;
-    return _remaining(sectionKey, optionId) > 0;
-  }
+  int _rem(String sk, String oid) { final a = _avail[sk]?[oid]; return a?['remaining'] ?? 999; }
+  int _lim(String sk, String oid) { final a = _avail[sk]?[oid]; return a?['limit'] ?? 0; }
+  bool _isAvail(String sk, String f, String oid) => _sel[f] == oid || _rem(sk, oid) > 0;
 
   Future<void> _submit() async {
-    for (final section in (widget.config?['sections'] as List? ?? [])) {
-      final field = section['field']?.toString() ?? '';
-      final title = section['title']?.toString() ?? '';
-      if ((_selections[field] ?? '').isEmpty) {
-        _snack('Please make a selection for $title');
-        return;
-      }
+    for (final s in (widget.config?['sections'] as List? ?? [])) {
+      final f = s['field']?.toString() ?? '', t = s['title']?.toString() ?? '';
+      if ((_sel[f] ?? '').isEmpty) { _snack('Please make a selection for $t'); return; }
     }
     setState(() => _loading = true);
-    final fields = Map<String, dynamic>.from(_selections);
-    fields['source'] = 'app';
-    final result = await _api.submitOptionalTours(fields);
+    final body = Map<String, dynamic>.from(_sel)..['source'] = 'app';
+    final r = await _api.submitOptionalTours(body);
     setState(() => _loading = false);
     if (!mounted) return;
-    if (result['success'] == true) { await widget.onSubmit(fields); }
-    else { _snack(result['message'] ?? 'Error'); }
+    if (r['success'] == true) { await widget.onSubmit(body); }
+    else { _snack(r['message'] ?? 'Error'); }
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700));
+  void _snack(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), backgroundColor: Colors.red.shade700));
 
   @override
   Widget build(BuildContext context) { super.build(context);
-    final sections = (widget.config?['sections'] as List? ?? []);
+    final sections = widget.config?['sections'] as List? ?? [];
     final deadline = widget.config?['deadline']?.toString() ?? '';
-    final toursForm = widget.config?['tours_form'] as Map?;
-    final title = toursForm?['title']?.toString() ?? '';
-    final desc = toursForm?['description']?.toString() ?? '';
-    final submitBtn = toursForm?['submit_button']?.toString() ?? 'SAVE & SUBMIT';
-    final backBtn = toursForm?['back_button']?.toString() ?? 'BACK';
-
+    final tf = widget.config?['tours_form'] as Map?;
+    final title = tf?['title']?.toString() ?? ''; final desc = tf?['description']?.toString() ?? '';
+    final submitBtn = tf?['submit_button']?.toString() ?? 'SAVE & SUBMIT';
+    final backBtn = tf?['back_button']?.toString() ?? 'BACK';
     if (sections.isEmpty) return const Center(child: CircularProgressIndicator());
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       if (title.isNotEmpty) Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w700)),
       if (desc.isNotEmpty) ...[const SizedBox(height: 4), Text(desc, style: TextStyle(fontSize: 13, color: AppTheme.textMid))],
-      if (deadline.isNotEmpty) ...[ const SizedBox(height: 12),
+      if (deadline.isNotEmpty) ...[const SizedBox(height: 12),
         Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppTheme.gold.withOpacity(0.06), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.gold.withOpacity(0.2))),
           child: Text('Please share your interest by $deadline so we can make the necessary arrangements.', style: TextStyle(fontSize: 13, color: AppTheme.gold, fontWeight: FontWeight.w600)))],
       const SizedBox(height: 20),
-
-      for (int i = 0; i < sections.length; i++) ...[
-        if (i > 0) const SizedBox(height: 16),
-        _buildSection(sections[i]),
-      ],
-
+      for (int i = 0; i < sections.length; i++) ...[if (i > 0) const SizedBox(height: 16), _section(sections[i])],
       const SizedBox(height: 28),
       Row(children: [
         Expanded(child: SizedBox(height: 50, child: OutlinedButton.icon(onPressed: widget.onBack, icon: const Icon(Icons.arrow_back, size: 18), label: Text(backBtn)))),
         const SizedBox(width: 12),
-        Expanded(flex: 2, child: SizedBox(height: 50, child: ElevatedButton(onPressed: _loading ? null : _submit,
-          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold),
+        Expanded(flex: 2, child: SizedBox(height: 50, child: ElevatedButton(onPressed: _loading ? null : _submit, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold),
           child: _loading ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
             : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(submitBtn, style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1)), const SizedBox(width: 8), const Icon(Icons.check, size: 18)])))),
       ]),
@@ -416,44 +351,33 @@ class _ToursFormState extends State<_ToursForm> with AutomaticKeepAliveClientMix
     ]);
   }
 
-  Widget _buildSection(dynamic section) {
-    final key = section['key']?.toString() ?? '';
-    final field = section['field']?.toString() ?? '';
-    final title = section['title']?.toString() ?? '';
-    final subtitle = section['subtitle']?.toString() ?? '';
-    final options = (section['options'] as List? ?? []);
-
+  Widget _section(dynamic s) {
+    final k = s['key']?.toString() ?? '', f = s['field']?.toString() ?? '';
+    final title = s['title']?.toString() ?? '', sub = s['subtitle']?.toString() ?? '';
+    final opts = s['options'] as List? ?? [];
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w700)),
-      if (subtitle.isNotEmpty) Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textMid)),
+      if (sub.isNotEmpty) Text(sub, style: TextStyle(fontSize: 12, color: AppTheme.textMid)),
       const SizedBox(height: 12),
-      for (final opt in options) _buildOption(key, field, opt),
+      for (final o in opts) _opt(k, f, o),
     ])));
   }
 
-  Widget _buildOption(String sectionKey, String field, dynamic opt) {
-    final id = opt['id']?.toString() ?? '';
-    final name = opt['name']?.toString() ?? '';
-    final maxSeats = opt['max_seats'] ?? 0;
-    final isNone = id == 'none' || id == 'yes' || id == 'no';
-    final hasLimit = maxSeats > 0 && !isNone;
-
-    final avail = !hasLimit || _isAvail(sectionKey, field, id);
-    final rem = hasLimit ? _remaining(sectionKey, id) : -1;
-    final lim = hasLimit ? _limit(sectionKey, id) : 0;
-    final full = hasLimit && !avail;
-
-    final seatText = (!hasLimit || lim <= 0) ? '' : full ? 'FULLY BOOKED' : '$rem / $lim seats left';
-    final seatColor = full ? Colors.red : (rem > 0 && rem <= 5 ? Colors.orange : AppTheme.teal);
-
-    final cv = _selections[field] ?? '';
+  Widget _opt(String sk, String f, dynamic o) {
+    final id = o['id']?.toString() ?? '', name = o['name']?.toString() ?? '';
+    final ms = o['max_seats'] ?? 0; final isNone = id == 'none' || id == 'yes' || id == 'no';
+    final hasLim = ms > 0 && !isNone;
+    final avail = !hasLim || _isAvail(sk, f, id);
+    final rem = hasLim ? _rem(sk, id) : -1; final lim = hasLim ? _lim(sk, id) : 0;
+    final full = hasLim && !avail;
+    final seatTxt = (!hasLim || lim <= 0) ? '' : full ? 'FULLY BOOKED' : '$rem / $lim seats left';
+    final seatClr = full ? Colors.red : (rem > 0 && rem <= 5 ? Colors.orange : AppTheme.teal);
 
     return Opacity(opacity: full ? 0.4 : 1, child: RadioListTile<String>(
-      value: id, groupValue: cv,
-      onChanged: full ? null : (v) => setState(() => _selections[field] = v ?? ''),
+      value: id, groupValue: _sel[f] ?? '',
+      onChanged: full ? null : (v) => setState(() => _sel[f] = v ?? ''),
       title: Text(name, style: TextStyle(fontSize: 14, color: full ? Colors.grey : null)),
-      subtitle: seatText.isNotEmpty ? Padding(padding: const EdgeInsets.only(left: 28),
-        child: Text(seatText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: seatColor))) : null,
+      subtitle: seatTxt.isNotEmpty ? Padding(padding: const EdgeInsets.only(left: 28), child: Text(seatTxt, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: seatClr))) : null,
       dense: true, contentPadding: EdgeInsets.zero, activeColor: AppTheme.teal));
   }
 }
