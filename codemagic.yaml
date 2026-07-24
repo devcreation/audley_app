@@ -171,7 +171,12 @@ workflows:
         script: flutter pub get
 
       - name: Build web
-        script: flutter build web --release --base-href /audleyachievers/app/ --web-renderer html
+        script: flutter build web --release --base-href /audleyachievers/app/
+
+      - name: Fix web assets
+        script: |
+          # Add Material Icons font for proper icon rendering
+          sed -i 's|</head>|<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>\n</head>|' build/web/index.html
 
       - name: Package web build
         script: |
