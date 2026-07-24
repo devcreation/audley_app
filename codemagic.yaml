@@ -175,8 +175,19 @@ workflows:
 
       - name: Fix web assets
         script: |
-          # Add Material Icons font for proper icon rendering (macOS BSD sed)
-          sed -i '' 's|</head>|<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/></head>|' build/web/index.html
+          cd build/web
+          
+          # 1. Copy app icon as favicon
+          if [ -f "assets/assets/icon.png" ]; then
+            cp assets/assets/icon.png favicon.png
+          fi
+          
+          # 2. Inject Material Icons font + Google Fonts + favicon into index.html
+          sed -i '' 's|</head>|<link rel="icon" type="image/png" href="favicon.png"/><link rel="apple-touch-icon" href="favicon.png"/><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700\&display=swap"/></head>|' index.html
+          
+          # 3. Remove default Flutter favicon references
+          sed -i '' 's|<link rel="icon" type="image/png" href="icons/Icon-192.png"/>||' index.html
+          sed -i '' 's|<link rel="apple-touch-icon" href="icons/Icon-192.png"/>||' index.html
 
       - name: Package web build
         script: |
