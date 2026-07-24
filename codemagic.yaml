@@ -142,3 +142,40 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
+
+
+  # ─── Web Build (Test on any iPhone without Apple account) ───
+  web-workflow:
+    name: Web Build
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Set up Flutter project scaffold
+        script: |
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms web
+
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+          if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+
+          cp -r /tmp/scaffold/web "$CM_BUILD_DIR/web"
+
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
+
+      - name: Install dependencies
+        script: flutter pub get
+
+      - name: Build web
+        script: flutter build web --release
+
+      - name: Package web build
+        script: |
+          cd build/web && zip -r ../../web-build.zip .
+
+    artifacts:
+      - web-build.zip
