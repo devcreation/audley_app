@@ -175,8 +175,8 @@ workflows:
 
       - name: Fix web assets
         script: |
-          # Add Material Icons font for proper icon rendering
-          sed -i 's|</head>|<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>\n</head>|' build/web/index.html
+          # Add Material Icons font for proper icon rendering (macOS BSD sed)
+          sed -i '' 's|</head>|<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/></head>|' build/web/index.html
 
       - name: Package web build
         script: |
