@@ -171,7 +171,7 @@ workflows:
         script: flutter pub get
 
       - name: Build web
-        script: flutter build web --release
+        script: flutter build web --release --base-href /audleyachievers/app/ --web-renderer html
 
       - name: Package web build
         script: |
