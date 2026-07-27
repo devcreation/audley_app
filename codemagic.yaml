@@ -182,27 +182,44 @@ workflows:
             cp assets/assets/icon.png favicon.png
           fi
 
-          # IIS web.config
+          # IIS web.config — overrides parent .json block + serves all static files
           cat > web.config << 'WCEOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <configuration>
-            <system.webServer>
-              <defaultDocument><files><clear /><add value="index.html" /></files></defaultDocument>
-              <staticContent>
-                <remove fileExtension=".json" />
-                <mimeMap fileExtension=".json" mimeType="application/json" />
-                <remove fileExtension=".js" />
-                <mimeMap fileExtension=".js" mimeType="application/javascript" />
-                <remove fileExtension=".otf" />
-                <mimeMap fileExtension=".otf" mimeType="font/otf" />
-                <remove fileExtension=".ttf" />
-                <mimeMap fileExtension=".ttf" mimeType="font/ttf" />
-                <remove fileExtension=".woff2" />
-                <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
-              </staticContent>
-            </system.webServer>
-          </configuration>
-          WCEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <defaultDocument>
+      <files><clear /><add value="index.html" /></files>
+    </defaultDocument>
+    <security>
+      <requestFiltering>
+        <fileExtensions allowUnlisted="true">
+          <clear />
+        </fileExtensions>
+      </requestFiltering>
+    </security>
+    <handlers>
+      <clear />
+      <add name="StaticFile" path="*" verb="*"
+           modules="StaticFileModule,DefaultDocumentModule,DirectoryListingModule"
+           resourceType="Either" requireAccess="Read" />
+    </handlers>
+    <staticContent>
+      <remove fileExtension=".json" />
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <remove fileExtension=".js" />
+      <mimeMap fileExtension=".js" mimeType="application/javascript" />
+      <remove fileExtension=".otf" />
+      <mimeMap fileExtension=".otf" mimeType="font/otf" />
+      <remove fileExtension=".ttf" />
+      <mimeMap fileExtension=".ttf" mimeType="font/ttf" />
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+      <remove fileExtension=".wasm" />
+      <mimeMap fileExtension=".wasm" mimeType="application/wasm" />
+    </staticContent>
+  </system.webServer>
+</configuration>
+WCEOF
 
           echo "Output ready"
 
