@@ -85,44 +85,31 @@ workflows:
 
       - name: Configure signing
         script: |
-          cat > "$CM_BUILD_DIR/android/key.properties" << EOF
-          storePassword=$CM_KEYSTORE_PASSWORD
-          keyPassword=$CM_KEY_PASSWORD
-          keyAlias=$CM_KEY_ALIAS
-          storeFile=release-keystore.jks
-          EOF
-
-          # Patch build.gradle to use signing config
-          GRADLE="$CM_BUILD_DIR/android/app/build.gradle"
-          if [ -f "$GRADLE" ]; then
-            sed -i 's/buildTypes {/signingConfigs { release { def props = new Properties(); def f = file("..\/key.properties"); if(f.exists()){props.load(new FileInputStream(f))}; storeFile file(props["storeFile"]); storePassword props["storePassword"]; keyAlias props["keyAlias"]; keyPassword props["keyPassword"] } }\n    buildTypes {/' "$GRADLE"
-            sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' "$GRADLE"
-          fi
-          # Handle build.gradle.kts
-          GRADLE_KTS="$CM_BUILD_DIR/android/app/build.gradle.kts"
-          if [ -f "$GRADLE_KTS" ] && ! [ -f "$GRADLE" ]; then
-            python3 -c "
-          import re
-          with open('$GRADLE_KTS','r') as f: c=f.read()
-          signing_block = '''
-      signingConfigs {
-          create("release") {
-              val props = java.util.Properties()
-              val f = file("../key.properties")
-              if (f.exists()) { props.load(java.io.FileInputStream(f)) }
-              storeFile = file(props.getProperty("storeFile", "release-keystore.jks"))
-              storePassword = props.getProperty("storePassword", "")
-              keyAlias = props.getProperty("keyAlias", "")
-              keyPassword = props.getProperty("keyPassword", "")
-          }
-      }
-          '''
-          c = c.replace('buildTypes {', signing_block + '\n    buildTypes {')
-          c = c.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
-          with open('$GRADLE_KTS','w') as f: f.write(c)
-          print('build.gradle.kts patched')
+          echo "storePassword=$CM_KEYSTORE_PASSWORD" > "$CM_BUILD_DIR/android/key.properties"
+          echo "keyPassword=$CM_KEY_PASSWORD" >> "$CM_BUILD_DIR/android/key.properties"
+          echo "keyAlias=$CM_KEY_ALIAS" >> "$CM_BUILD_DIR/android/key.properties"
+          echo "storeFile=release-keystore.jks" >> "$CM_BUILD_DIR/android/key.properties"
+          python3 -c "
+          import os
+          app='$CM_BUILD_DIR/android/app'
+          kts=os.path.join(app,'build.gradle.kts')
+          gr=os.path.join(app,'build.gradle')
+          target=kts if os.path.exists(kts) else gr
+          with open(target,'r') as f: c=f.read()
+          if 'signingConfigs' not in c:
+              if target.endswith('.kts'):
+                  block='signingConfigs { create(\"release\") { val p=java.util.Properties(); val f=file(\"../key.properties\"); if(f.exists()){p.load(java.io.FileInputStream(f))}; storeFile=file(p.getProperty(\"storeFile\",\"\")); storePassword=p.getProperty(\"storePassword\",\"\"); keyAlias=p.getProperty(\"keyAlias\",\"\"); keyPassword=p.getProperty(\"keyPassword\",\"\") } }\n    '
+                  c=c.replace('buildTypes {',block+'buildTypes {')
+                  c=c.replace('signingConfig = signingConfigs.getByName(\"debug\")','signingConfig = signingConfigs.getByName(\"release\")')
+              else:
+                  block='signingConfigs { release { def p=new Properties(); def f=file(\"../key.properties\"); if(f.exists()){p.load(new FileInputStream(f))}; storeFile file(p[\"storeFile\"]); storePassword p[\"storePassword\"]; keyAlias p[\"keyAlias\"]; keyPassword p[\"keyPassword\"] } }\n    '
+                  c=c.replace('buildTypes {',block+'buildTypes {')
+                  c=c.replace('signingConfig signingConfigs.debug','signingConfig signingConfigs.release')
+              with open(target,'w') as f: f.write(c)
+              print('Signing config patched: '+target)
+          else:
+              print('Signing config already exists')
           "
-          fi
 
       - name: Build signed AAB
         script: flutter build appbundle --release
