@@ -31,7 +31,6 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
     try {
       final res = await Future.wait([_api.getParticipantInfo(), _api.getOptionalTours(), _api.getFormConfig()]);
       bool pDone = false, tDone = false;
-      Map<String, dynamic>? pinfoDefaults;
       if (res[0]['success'] == true && res[0]['data'] != null && (res[0]['data']['full_name'] ?? '').toString().isNotEmpty) {
         _pinfoData = res[0]['data']; pDone = true;
       } else if (res[0]['success'] == true && res[0]['defaults'] != null) {
