@@ -19,7 +19,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
   late TabController _tabCtrl;
   final _api = ApiClient();
   RegState _state = RegState.loading;
-  Map<String, dynamic>? _pinfoData, _toursData, _formConfig;
+  Map<String, dynamic>? _pinfoData, _toursData, _formConfig, _pinfoDefaults;
 
   @override
   void initState() { super.initState(); _tabCtrl = TabController(length: 3, vsync: this); _loadAll(); }
@@ -31,8 +31,12 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
     try {
       final res = await Future.wait([_api.getParticipantInfo(), _api.getOptionalTours(), _api.getFormConfig()]);
       bool pDone = false, tDone = false;
+      Map<String, dynamic>? pinfoDefaults;
       if (res[0]['success'] == true && res[0]['data'] != null && (res[0]['data']['full_name'] ?? '').toString().isNotEmpty) {
         _pinfoData = res[0]['data']; pDone = true;
+      } else if (res[0]['success'] == true && res[0]['defaults'] != null) {
+        // Not submitted yet, but use account data as defaults for pre-fill
+        _pinfoDefaults = Map<String, dynamic>.from(res[0]['defaults']);
       }
       if (res[1]['success'] == true && res[1]['data'] != null) {
         final d = res[1]['data'];
@@ -81,7 +85,7 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
         ? const Center(child: CircularProgressIndicator())
         : TabBarView(controller: _tabCtrl, physics: const NeverScrollableScrollPhysics(), children: [
             _pinfoLocked ? _lockedPanel(Icons.check_circle, AppTheme.teal, _formConfig?['confirmation']?['pinfo_locked_title'] ?? 'Submitted', _formConfig?['confirmation']?['pinfo_locked_message'] ?? 'Your details have been received.')
-              : _PinfoForm(data: _pinfoData, config: _formConfig?['participant_form'], onSaved: _onPinfoSaved),
+              : _PinfoForm(data: _pinfoData ?? _pinfoDefaults, config: _formConfig?['participant_form'], onSaved: _onPinfoSaved),
             _toursLocked
               ? (_state == RegState.neitherDone
                   ? _lockedPanel(Icons.lock_outline, AppTheme.textLight, 'Complete Step 1', 'Fill in your Participant Info to unlock Optional Tours.')
