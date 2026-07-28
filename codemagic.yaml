@@ -222,6 +222,10 @@ workflows:
       - name: Install dependencies
         script: flutter pub get
 
+      - name: Fix compatibility for Flutter 3.22
+        script: |
+          sed -i '' 's/CardThemeData(/CardTheme(/g' lib/core/theme.dart
+
       - name: Build web
         script: flutter build web --release --base-href /audleyachievers/app/ --web-renderer html
 
