@@ -110,7 +110,7 @@ workflows:
       xcode: latest
       cocoapods: default
       ios_signing:
-        distribution_type: ad_hoc
+        distribution_type: app_store
         bundle_identifier: com.distantfrontiers.audleyAchievers
     scripts:
       - name: Set up Flutter project scaffold
