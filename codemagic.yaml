@@ -71,45 +71,18 @@ workflows:
 
       - name: Generate keystore
         script: |
-          if [ -z "$CM_KEYSTORE" ]; then
-            keytool -genkey -v \
-              -keystore "$CM_BUILD_DIR/android/app/release-keystore.jks" \
-              -alias "$CM_KEY_ALIAS" \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$CM_KEYSTORE_PASSWORD" \
-              -keypass "$CM_KEY_PASSWORD" \
-              -dname "CN=Distant Frontiers, OU=Dev, O=Distant Frontiers, L=Delhi, ST=Delhi, C=IN"
-          else
-            echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/android/app/release-keystore.jks"
-          fi
+          KEYSTORE_PATH="$CM_BUILD_DIR/android/app/release-keystore.jks"
+          keytool -genkey -v \
+            -keystore "$KEYSTORE_PATH" \
+            -alias "$CM_KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$CM_KEYSTORE_PASSWORD" \
+            -keypass "$CM_KEY_PASSWORD" \
+            -dname "CN=Distant Frontiers, OU=Dev, O=Distant Frontiers, L=Delhi, ST=Delhi, C=IN"
+          ls -la "$KEYSTORE_PATH"
 
       - name: Configure signing
-        script: |
-          echo "storePassword=$CM_KEYSTORE_PASSWORD" > "$CM_BUILD_DIR/android/key.properties"
-          echo "keyPassword=$CM_KEY_PASSWORD" >> "$CM_BUILD_DIR/android/key.properties"
-          echo "keyAlias=$CM_KEY_ALIAS" >> "$CM_BUILD_DIR/android/key.properties"
-          echo "storeFile=release-keystore.jks" >> "$CM_BUILD_DIR/android/key.properties"
-          python3 -c "
-          import os
-          app='$CM_BUILD_DIR/android/app'
-          kts=os.path.join(app,'build.gradle.kts')
-          gr=os.path.join(app,'build.gradle')
-          target=kts if os.path.exists(kts) else gr
-          with open(target,'r') as f: c=f.read()
-          if 'signingConfigs' not in c:
-              if target.endswith('.kts'):
-                  block='signingConfigs { create(\"release\") { val p=java.util.Properties(); val f=file(\"../key.properties\"); if(f.exists()){p.load(java.io.FileInputStream(f))}; storeFile=file(p.getProperty(\"storeFile\",\"\")); storePassword=p.getProperty(\"storePassword\",\"\"); keyAlias=p.getProperty(\"keyAlias\",\"\"); keyPassword=p.getProperty(\"keyPassword\",\"\") } }\n    '
-                  c=c.replace('buildTypes {',block+'buildTypes {')
-                  c=c.replace('signingConfig = signingConfigs.getByName(\"debug\")','signingConfig = signingConfigs.getByName(\"release\")')
-              else:
-                  block='signingConfigs { release { def p=new Properties(); def f=file(\"../key.properties\"); if(f.exists()){p.load(new FileInputStream(f))}; storeFile file(p[\"storeFile\"]); storePassword p[\"storePassword\"]; keyAlias p[\"keyAlias\"]; keyPassword p[\"keyPassword\"] } }\n    '
-                  c=c.replace('buildTypes {',block+'buildTypes {')
-                  c=c.replace('signingConfig signingConfigs.debug','signingConfig signingConfigs.release')
-              with open(target,'w') as f: f.write(c)
-              print('Signing config patched: '+target)
-          else:
-              print('Signing config already exists')
-          "
+        script: python3 "$CM_BUILD_DIR/scripts/configure_signing.py"
 
       - name: Build signed AAB
         script: flutter build appbundle --release
