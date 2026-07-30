@@ -71,21 +71,29 @@ workflows:
 
       - name: Generate keystore
         script: |
-          KEYSTORE_PATH="$CM_BUILD_DIR/android/app/release-keystore.jks"
           keytool -genkey -v \
-            -keystore "$KEYSTORE_PATH" \
+            -keystore "$CM_BUILD_DIR/release-keystore.jks" \
             -alias "$CM_KEY_ALIAS" \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass "$CM_KEYSTORE_PASSWORD" \
             -keypass "$CM_KEY_PASSWORD" \
             -dname "CN=Distant Frontiers, OU=Dev, O=Distant Frontiers, L=Delhi, ST=Delhi, C=IN"
-          ls -la "$KEYSTORE_PATH"
 
-      - name: Configure signing
-        script: python3 "$CM_BUILD_DIR/scripts/configure_signing.py"
-
-      - name: Build signed AAB
+      - name: Build AAB
         script: flutter build appbundle --release
+
+      - name: Sign AAB with release key
+        script: |
+          AAB_PATH=$(find build -name "app-release.aab" | head -1)
+          echo "Signing: $AAB_PATH"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore "$CM_BUILD_DIR/release-keystore.jks" \
+            -storepass "$CM_KEYSTORE_PASSWORD" \
+            -keypass "$CM_KEY_PASSWORD" \
+            "$AAB_PATH" "$CM_KEY_ALIAS"
+          echo "=== Verify signing ==="
+          jarsigner -verify "$AAB_PATH"
+          keytool -printcert -jarfile "$AAB_PATH" | head -5
 
     artifacts:
       - build/**/outputs/**/*.aab
