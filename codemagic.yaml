@@ -109,8 +109,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      groups:
-        - apple_credentials
     scripts:
       - name: Set up Flutter project scaffold
         script: |
