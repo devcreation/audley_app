@@ -111,9 +111,6 @@ workflows:
       cocoapods: default
       groups:
         - android_signing
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.distantfrontiers.audleyAchievers
     scripts:
       - name: Set up Flutter project scaffold
         script: |
@@ -169,6 +166,9 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" --type IOS_APP_STORE --create
+          keychain add-certificates
           xcode-project use-profiles""""""
 
       - name: Build IPA
