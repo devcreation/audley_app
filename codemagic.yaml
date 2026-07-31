@@ -178,12 +178,40 @@ workflows:
           python3 << 'PYEOF'
           import glob, subprocess, plistlib, os, re
 
-          profiles = glob.glob(os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"))
+          # Search multiple possible profile locations
+          search_paths = [
+              os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"),
+              os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles/*.mobileprovision"),
+              "/tmp/*.mobileprovision",
+              os.path.expanduser("~/*.mobileprovision"),
+              os.path.expanduser("~/clone/*.mobileprovision"),
+          ]
+
+          # Also search recursively from home
+          import pathlib
+          home_profiles = list(pathlib.Path.home().rglob("*.mobileprovision"))
+
+          profiles = []
+          for p in search_paths:
+              profiles.extend(glob.glob(p))
+          profiles.extend([str(p) for p in home_profiles])
+
+          # Remove duplicates
+          profiles = list(set(profiles))
+
+          print(f"Found {len(profiles)} profile(s):")
+          for p in profiles:
+              print(f"  {p}")
+
           if not profiles:
-              print("ERROR: No profiles found!")
+              print("ERROR: No profiles found anywhere!")
+              print("Listing home directory:")
+              for item in pathlib.Path.home().iterdir():
+                  print(f"  {item}")
               exit(1)
 
           profile_path = profiles[0]
+          print(f"\nUsing profile: {profile_path}")
           result = subprocess.run(["security", "cms", "-D", "-i", profile_path], capture_output=True, text=True)
           plist = plistlib.loads(result.stdout.encode())
           profile_uuid = plist["UUID"]
@@ -192,6 +220,7 @@ workflows:
           print(f"Profile: {profile_name}, UUID: {profile_uuid}, Team: {team_id}")
 
           result = subprocess.run(["security", "find-identity", "-v", "-p", "codesigning"], capture_output=True, text=True)
+          print(f"\nAvailable identities:\n{result.stdout}")
           identity = ""
           for line in result.stdout.split("\n"):
               if "Apple Distribution" in line or "iPhone Distribution" in line:
@@ -203,7 +232,7 @@ workflows:
                       try: identity = line.split('"')[1]
                       except: pass
                       if identity: break
-          print(f"Identity: {identity}")
+          print(f"Using identity: {identity}")
 
           pbxproj = "ios/Runner.xcodeproj/project.pbxproj"
           with open(pbxproj, "r") as f:
@@ -212,7 +241,6 @@ workflows:
           c = c.replace("CODE_SIGN_STYLE = Automatic", "CODE_SIGN_STYLE = Manual")
           c = re.sub(r'DEVELOPMENT_TEAM = "?[^";]*"?;', f'DEVELOPMENT_TEAM = {team_id};', c)
           c = re.sub(r'DevelopmentTeam = [^;]*;', f'DevelopmentTeam = {team_id};', c)
-          c = c.replace('PRODUCT_BUNDLE_IDENTIFIER = "com.distantfrontiers.audleyAchievers"', f'PRODUCT_BUNDLE_IDENTIFIER = "com.distantfrontiers.audleyAchievers"')
           if "PROVISIONING_PROFILE_SPECIFIER" in c:
               c = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "?[^";]*"?;', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', c)
           else:
