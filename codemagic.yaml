@@ -109,6 +109,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - apple_credentials
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.distantfrontiers.audleyAchievers
