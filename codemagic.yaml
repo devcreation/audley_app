@@ -85,14 +85,19 @@ workflows:
       - name: Sign AAB with release key
         script: |
           AAB_PATH=$(find build -name "app-release.aab" | head -1)
-          echo "Signing: $AAB_PATH"
+          echo "AAB: $AAB_PATH"
+
+          echo "=== Removing debug signature ==="
+          zip -d "$AAB_PATH" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/*.EC" "META-INF/BNDLTOOL.*" || true
+
+          echo "=== Signing with release key ==="
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore "$CM_BUILD_DIR/release-keystore.jks" \
             -storepass "$CM_KEYSTORE_PASSWORD" \
             -keypass "$CM_KEY_PASSWORD" \
             "$AAB_PATH" "$CM_KEY_ALIAS"
-          echo "=== Verify signing ==="
-          jarsigner -verify "$AAB_PATH"
+
+          echo "=== Verify ==="
           keytool -printcert -jarfile "$AAB_PATH" | head -5
 
     artifacts:
