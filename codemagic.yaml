@@ -169,36 +169,45 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
-          # Generate certificate private key if not set
-          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
-            echo "Generating certificate private key..."
-            ssh-keygen -t rsa -b 2048 -m PEM -f /tmp/cert_key -q -N ""
-            export CERTIFICATE_PRIVATE_KEY=$(cat /tmp/cert_key)
-            echo "Certificate key generated"
-          fi
+          set -e
 
-          echo "=== Step 1: Fetch signing files ==="
+          # Decode API key from base64 env var to file
+          echo "$APP_STORE_KEY_BASE64" | base64 --decode > /tmp/api_key.p8
+          echo "API key decoded: $(wc -c < /tmp/api_key.p8) bytes"
+
+          # Generate certificate private key
+          openssl genrsa -out /tmp/cert_key.pem 2048 2>/dev/null
+          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
+          echo "Certificate key generated"
+
+          # Fetch or create signing files with explicit flags
+          echo "=== Fetching signing files ==="
           app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
             --type IOS_APP_STORE \
             --create \
-            --verbose
+            --issuer-id "6cdbe292-703f-4c29-be04-f9daa76d7ddc" \
+            --key-id "FML96DR6QB" \
+            --private-key @/tmp/api_key.p8
 
-          echo "=== Step 2: Initialize keychain ==="
+          echo "=== Initializing keychain ==="
           keychain initialize
 
-          echo "=== Step 3: List and save certificates ==="
+          echo "=== Saving certificates ==="
           app-store-connect certificates list \
             --type IOS_DISTRIBUTION \
             --certificate-key=CERTIFICATE_PRIVATE_KEY \
-            --save
+            --save \
+            --issuer-id "6cdbe292-703f-4c29-be04-f9daa76d7ddc" \
+            --key-id "FML96DR6QB" \
+            --private-key @/tmp/api_key.p8
 
-          echo "=== Step 4: Add certificates to keychain ==="
+          echo "=== Adding certificates to keychain ==="
           keychain add-certificates
 
-          echo "=== Step 5: Use profiles ==="
+          echo "=== Configuring Xcode profiles ==="
           xcode-project use-profiles
 
-          echo "=== Done ==="
+          echo "=== iOS signing complete ===""
 
       - name: Build IPA
         script: |
