@@ -111,6 +111,9 @@ workflows:
       cocoapods: default
       groups:
         - android_signing
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.distantfrontiers.audleyAchievers
     scripts:
       - name: Set up Flutter project scaffold
         script: |
@@ -166,152 +169,11 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" --type IOS_APP_STORE --create
-          keychain add-certificates
-
-          # Manually configure Xcode project signing (don't rely on xcode-project use-profiles)
-          python3 << 'SIGNEOF'
-          import glob, subprocess, plistlib, os, re
-
-          # Find provisioning profile
-          profiles = glob.glob(os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"))
-          if not profiles:
-              print("ERROR: No provisioning profiles found!")
-              exit(1)
-
-          # Extract profile info using security cms
-          profile_path = profiles[0]
-          print(f"Using profile: {profile_path}")
-          result = subprocess.run(["security", "cms", "-D", "-i", profile_path], capture_output=True, text=True)
-          plist = plistlib.loads(result.stdout.encode())
-
-          profile_uuid = plist["UUID"]
-          profile_name = plist["Name"]
-          team_id = plist["TeamIdentifier"][0]
-          bundle_id = "com.distantfrontiers.audleyAchievers"
-
-          print(f"Profile UUID: {profile_uuid}")
-          print(f"Profile Name: {profile_name}")
-          print(f"Team ID: {team_id}")
-          print(f"Bundle ID: {bundle_id}")
-
-          # Find signing identity
-          result = subprocess.run(["security", "find-identity", "-v", "-p", "codesigning"], capture_output=True, text=True)
-          identity = ""
-          for line in result.stdout.split("\n"):
-              if "Apple Distribution" in line or "iPhone Distribution" in line:
-                  identity = line.split('"')[1] if '"' in line else ""
-                  break
-          if not identity:
-              # Use first valid identity
-              for line in result.stdout.split("\n"):
-                  if '"' in line and "CSSMERR" not in line:
-                      identity = line.split('"')[1]
-                      break
-          print(f"Signing Identity: {identity}")
-
-          # Modify Xcode project
-          pbxproj = "ios/Runner.xcodeproj/project.pbxproj"
-          with open(pbxproj, "r") as f:
-              content = f.read()
-
-          # Disable automatic signing
-          content = content.replace(
-              "ProvisioningStyle = Automatic",
-              "ProvisioningStyle = Manual"
-          )
-          content = content.replace(
-              'CODE_SIGN_STYLE = Automatic',
-              'CODE_SIGN_STYLE = Manual'
-          )
-
-          # Set team ID
-          content = re.sub(
-              r'DEVELOPMENT_TEAM = "";',
-              f'DEVELOPMENT_TEAM = "{team_id}";',
-              content
-          )
-          content = re.sub(
-              r'DevelopmentTeam = "";',
-              f'DevelopmentTeam = "{team_id}";',
-              content
-          )
-          # Also set if no team was set
-          if f'DEVELOPMENT_TEAM = "{team_id}"' not in content:
-              content = content.replace(
-                  "CODE_SIGN_STYLE = Manual;",
-                  f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = "{team_id}";'
-              )
-
-          # Set provisioning profile
-          content = content.replace(
-              'PROVISIONING_PROFILE_SPECIFIER = "";',
-              f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";'
-          )
-          if "PROVISIONING_PROFILE_SPECIFIER" not in content:
-              content = content.replace(
-                  "CODE_SIGN_STYLE = Manual;",
-                  f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile_name}";'
-              )
-
-          # Set code sign identity
-          content = content.replace(
-              '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";',
-              f'"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "{identity}";'
-          )
-          content = re.sub(
-              r'CODE_SIGN_IDENTITY = ".*?";',
-              f'CODE_SIGN_IDENTITY = "{identity}";',
-              content
-          )
-
-          with open(pbxproj, "w") as f:
-              f.write(content)
-          print("Xcode project configured for manual signing")
-
-          # Create export options plist
-          export_plist = {
-              "method": "app-store",
-              "teamID": team_id,
-              "signingStyle": "manual",
-              "provisioningProfiles": {
-                  bundle_id: profile_name
-              },
-              "signingCertificate": identity,
-              "uploadBitcode": False,
-              "uploadSymbols": True,
-          }
-          plist_path = os.path.expanduser("~/export_options.plist")
-          with open(plist_path, "wb") as f:
-              plistlib.dump(export_plist, f)
-          print(f"Export options plist created at {plist_path}")
-
-          # Verify
-          with open(plist_path, "rb") as f:
-              verify = plistlib.load(f)
-          print(f"Export method: {verify['method']}")
-          print(f"Provisioning profiles: {verify['provisioningProfiles']}")
-          SIGNEOF
+          xcode-project use-profiles
 
       - name: Build IPA
         script: |
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath /tmp/Runner.xcarchive \
-            archive \
-            -allowProvisioningUpdates
-
-          xcodebuild -exportArchive \
-            -archivePath /tmp/Runner.xcarchive \
-            -exportPath /tmp/ipa_output \
-            -exportOptionsPlist ~/export_options.plist
-
-          mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
-          cp /tmp/ipa_output/*.ipa "$CM_BUILD_DIR/build/ios/ipa/"
-          echo "IPA built successfully"
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
