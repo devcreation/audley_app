@@ -169,6 +169,24 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
+          # Fetch or create provisioning profiles and certificates
+          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
+            --type IOS_APP_STORE \
+            --create
+
+          # Initialize keychain
+          keychain initialize
+
+          # Fetch and save distribution certificate
+          app-store-connect certificates list \
+            --type IOS_DISTRIBUTION \
+            --certificate-key=CERTIFICATE_PRIVATE_KEY \
+            --save || true
+
+          # Add certificates to keychain
+          keychain add-certificates
+
+          # Configure Xcode project to use the profiles
           xcode-project use-profiles
 
       - name: Build IPA
