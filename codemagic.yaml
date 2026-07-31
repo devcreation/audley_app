@@ -109,6 +109,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - android_signing
     scripts:
       - name: Set up Flutter project scaffold
         script: |
