@@ -111,6 +111,9 @@ workflows:
       cocoapods: default
       groups:
         - android_signing
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.distantfrontiers.audleyAchievers
     scripts:
       - name: Set up Flutter project scaffold
         script: |
@@ -166,49 +169,7 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
-          set -e
-
-          # Decode API key to file
-          echo "$APP_STORE_KEY_BASE64" | base64 -D > /tmp/api_key.p8
-          # Ensure trailing newline
-          echo "" >> /tmp/api_key.p8
-
-          # Debug: verify key format
-          echo "=== Key file ==="
-          wc -lc /tmp/api_key.p8
-          cat /tmp/api_key.p8
-
-          # Generate certificate private key
-          openssl genrsa -out /tmp/cert_key.pem 2048 2>/dev/null
-
-          # Set env vars
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="FML96DR6QB"
-          export APP_STORE_CONNECT_ISSUER_ID="6cdbe292-703f-4c29-be04-f9daa76d7ddc"
-          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
-
-          echo "=== Fetching signing files ==="
-          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
-            --type IOS_APP_STORE \
-            --create \
-            --private-key "$(cat /tmp/api_key.p8)"
-
-          echo "=== Initializing keychain ==="
-          keychain initialize
-
-          echo "=== Saving certificates ==="
-          app-store-connect certificates list \
-            --type IOS_DISTRIBUTION \
-            --certificate-key=CERTIFICATE_PRIVATE_KEY \
-            --private-key "$(cat /tmp/api_key.p8)" \
-            --save
-
-          echo "=== Adding certificates to keychain ==="
-          keychain add-certificates
-
-          echo "=== Configuring Xcode profiles ==="
-          xcode-project use-profiles
-
-          echo "=== iOS signing complete ==="""""
+          xcode-project use-profiles""""""
 
       - name: Build IPA
         script: |
