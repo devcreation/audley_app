@@ -168,21 +168,25 @@ workflows:
         script: |
           set -e
 
-          # Decode API key and set as environment variable
-          export APP_STORE_CONNECT_PRIVATE_KEY="$(echo "$APP_STORE_KEY_BASE64" | base64 --decode)"
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="FML96DR6QB"
-          export APP_STORE_CONNECT_ISSUER_ID="6cdbe292-703f-4c29-be04-f9daa76d7ddc"
+          # Decode API key to file (preserves newlines)
+          echo "$APP_STORE_KEY_BASE64" | base64 -D > /tmp/api_key.p8
 
-          echo "Key length: ${#APP_STORE_CONNECT_PRIVATE_KEY} chars"
-          echo "Key ID: $APP_STORE_CONNECT_KEY_IDENTIFIER"
-          echo "Issuer: $APP_STORE_CONNECT_ISSUER_ID"
+          # Debug: verify key format
+          echo "=== Key file info ==="
+          wc -l /tmp/api_key.p8
+          head -1 /tmp/api_key.p8
+          tail -1 /tmp/api_key.p8
 
           # Generate certificate private key
           openssl genrsa -out /tmp/cert_key.pem 2048 2>/dev/null
-          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
           echo "Certificate key generated"
 
-          # Fetch or create signing files (reads from env vars automatically)
+          # Set env vars - read key from file to preserve newlines
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(cat /tmp/api_key.p8)"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="FML96DR6QB"
+          export APP_STORE_CONNECT_ISSUER_ID="6cdbe292-703f-4c29-be04-f9daa76d7ddc"
+          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
+
           echo "=== Fetching signing files ==="
           app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
             --type IOS_APP_STORE \
@@ -203,7 +207,7 @@ workflows:
           echo "=== Configuring Xcode profiles ==="
           xcode-project use-profiles
 
-          echo "=== iOS signing complete ==="""
+          echo "=== iOS signing complete ===""""
 
       - name: Build IPA
         script: |
