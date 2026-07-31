@@ -169,25 +169,36 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
-          # Fetch or create provisioning profiles and certificates
+          # Generate certificate private key if not set
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "Generating certificate private key..."
+            ssh-keygen -t rsa -b 2048 -m PEM -f /tmp/cert_key -q -N ""
+            export CERTIFICATE_PRIVATE_KEY=$(cat /tmp/cert_key)
+            echo "Certificate key generated"
+          fi
+
+          echo "=== Step 1: Fetch signing files ==="
           app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --verbose
 
-          # Initialize keychain
+          echo "=== Step 2: Initialize keychain ==="
           keychain initialize
 
-          # Fetch and save distribution certificate
+          echo "=== Step 3: List and save certificates ==="
           app-store-connect certificates list \
             --type IOS_DISTRIBUTION \
             --certificate-key=CERTIFICATE_PRIVATE_KEY \
-            --save || true
+            --save
 
-          # Add certificates to keychain
+          echo "=== Step 4: Add certificates to keychain ==="
           keychain add-certificates
 
-          # Configure Xcode project to use the profiles
+          echo "=== Step 5: Use profiles ==="
           xcode-project use-profiles
+
+          echo "=== Done ==="
 
       - name: Build IPA
         script: |
