@@ -34,7 +34,6 @@ class _FormsScreenState extends ConsumerState<FormsScreen> with SingleTickerProv
       if (res[0]['success'] == true && res[0]['data'] != null && (res[0]['data']['full_name'] ?? '').toString().isNotEmpty) {
         _pinfoData = res[0]['data']; pDone = true;
       } else if (res[0]['success'] == true && res[0]['defaults'] != null) {
-        // Not submitted yet, but use account data as defaults for pre-fill
         _pinfoDefaults = Map<String, dynamic>.from(res[0]['defaults']);
       }
       if (res[1]['success'] == true && res[1]['data'] != null) {
