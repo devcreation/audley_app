@@ -1,4 +1,5 @@
 workflows:
+
   android-debug:
     name: Android Debug
     max_build_duration: 60
@@ -6,48 +7,46 @@ workflows:
     environment:
       flutter: stable
     scripts:
-    - name: Set up Flutter project scaffold
-      script: 'flutter create --org com.distantfrontiers --project-name audley_achievers
-        /tmp/scaffold --platforms android,ios
+      - name: Set up Flutter project scaffold
+        script: |
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+          if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
+          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
 
-        cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+      - name: Add internet permission
+        script: |
+          MANIFEST="$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i '' 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\
+              <application/' "$MANIFEST"
+            echo "INTERNET permission added"
+          else
+            echo "INTERNET permission already present"
+          fi
 
-        cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+      - name: Install dependencies
+        script: flutter pub get
 
-        if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets;
-        fi
+      - name: Set app display name
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
-        rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+      - name: Generate app icon
+        script: dart run flutter_launcher_icons
 
-        rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+      - name: Build debug APK
+        script: flutter build apk --debug
 
-        for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f"
-        "$CM_BUILD_DIR/$f"; done
-
-        rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
-
-        cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
-
-        if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets
-        "$CM_BUILD_DIR/assets"; fi
-
-        '
-    - name: Add internet permission
-      script: "sed -i \"s|<manifest |<manifest xmlns:tools=\"http://schemas.android.com/tools\"\
-        \ |; s|<application|<uses-permission android:name=\"android.permission.INTERNET\"\
-        />\n    <application|\" \"$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml\"\
-        \necho \"INTERNET permission added\"\ngrep \"INTERNET\" \"$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml\""
-    - name: Install dependencies
-      script: flutter pub get
-    - name: Set app display name
-      script: dart run rename setAppName --targets android,ios --value "Audley's Top
-        Performers Incentive"
-    - name: Generate app icon
-      script: dart run flutter_launcher_icons
-    - name: Build debug APK
-      script: flutter build apk --debug
     artifacts:
-    - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.apk
+
+
   android-release:
     name: Android Play Store
     max_build_duration: 60
@@ -55,73 +54,70 @@ workflows:
     environment:
       flutter: stable
       groups:
-      - android_signing
+        - android_signing
     scripts:
-    - name: Set up Flutter project scaffold
-      script: 'flutter create --org com.distantfrontiers --project-name audley_achievers
-        /tmp/scaffold --platforms android,ios
+      - name: Set up Flutter project scaffold
+        script: |
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+          if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
+          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
 
-        cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+      - name: Add internet permission
+        script: |
+          MANIFEST="$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "android.permission.INTERNET" "$MANIFEST"; then
+            sed -i '' 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\
+              <application/' "$MANIFEST"
+            echo "INTERNET permission added"
+          else
+            echo "INTERNET permission already present"
+          fi
 
-        cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+      - name: Install dependencies
+        script: flutter pub get
 
-        if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets;
-        fi
+      - name: Set app display name
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
-        rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+      - name: Generate app icon
+        script: dart run flutter_launcher_icons
 
-        rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+      - name: Generate keystore
+        script: |
+          echo "$CM_KEYSTORE_BASE64" | base64 -D > "$CM_BUILD_DIR/release-keystore.jks" 2>/dev/null || \
+          echo "$CM_KEYSTORE_BASE64" | base64 --decode > "$CM_BUILD_DIR/release-keystore.jks"
+          ls -la "$CM_BUILD_DIR/release-keystore.jks"
 
-        for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f"
-        "$CM_BUILD_DIR/$f"; done
+      - name: Build AAB
+        script: flutter build appbundle --release
 
-        rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+      - name: Sign AAB with release key
+        script: |
+          AAB_PATH=$(find build -name "app-release.aab" | head -1)
+          echo "AAB: $AAB_PATH"
+          echo "=== Removing debug signature ==="
+          zip -d "$AAB_PATH" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/*.EC" "META-INF/BNDLTOOL.*" || true
+          echo "=== Signing with release key ==="
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore "$CM_BUILD_DIR/release-keystore.jks" \
+            -storepass "$CM_KEYSTORE_PASSWORD" \
+            -keypass "$CM_KEY_PASSWORD" \
+            "$AAB_PATH" "$CM_KEY_ALIAS"
+          echo "=== Verify ==="
+          keytool -printcert -jarfile "$AAB_PATH" | head -5
 
-        cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
-
-        if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets
-        "$CM_BUILD_DIR/assets"; fi
-
-        '
-    - name: Add internet permission
-      script: "sed -i \"s|<manifest |<manifest xmlns:tools=\"http://schemas.android.com/tools\"\
-        \ |; s|<application|<uses-permission android:name=\"android.permission.INTERNET\"\
-        />\n    <application|\" \"$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml\"\
-        \necho \"INTERNET permission added\"\ngrep \"INTERNET\" \"$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml\""
-    - name: Install dependencies
-      script: flutter pub get
-    - name: Set app display name
-      script: dart run rename setAppName --targets android,ios --value "Audley's Top
-        Performers Incentive"
-    - name: Generate app icon
-      script: dart run flutter_launcher_icons
-    - name: Generate keystore
-      script: 'echo "$CM_KEYSTORE_BASE64" | base64 -D > "$CM_BUILD_DIR/release-keystore.jks"
-        2>/dev/null || \
-
-        echo "$CM_KEYSTORE_BASE64" | base64 --decode > "$CM_BUILD_DIR/release-keystore.jks"
-
-        ls -la "$CM_BUILD_DIR/release-keystore.jks"
-
-        keytool -list -keystore "$CM_BUILD_DIR/release-keystore.jks" -storepass "$CM_KEYSTORE_PASSWORD"
-        | head -5
-
-        '
-    - name: Build AAB
-      script: flutter build appbundle --release
-    - name: Sign AAB with release key
-      script: "AAB_PATH=$(find build -name \"app-release.aab\" | head -1)\necho \"\
-        AAB: $AAB_PATH\"\necho \"=== Removing debug signature ===\"\nzip -d \"$AAB_PATH\"\
-        \ \"META-INF/*.SF\" \"META-INF/*.RSA\" \"META-INF/*.DSA\" \"META-INF/*.EC\"\
-        \ \"META-INF/BNDLTOOL.*\" || true\necho \"=== Signing with release key ===\"\
-        \njarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \\\n  -keystore\
-        \ \"$CM_BUILD_DIR/release-keystore.jks\" \\\n  -storepass \"$CM_KEYSTORE_PASSWORD\"\
-        \ \\\n  -keypass \"$CM_KEY_PASSWORD\" \\\n  \"$AAB_PATH\" \"$CM_KEY_ALIAS\"\
-        \necho \"=== Verify ===\"\nkeytool -printcert -jarfile \"$AAB_PATH\" | head\
-        \ -5\n"
     artifacts:
-    - build/**/outputs/**/*.aab
-    - build/**/outputs/**/mapping.txt
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/mapping.txt
+
+
   ios-workflow:
     name: iOS Build
     max_build_duration: 60
@@ -133,55 +129,49 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-    - name: Set up Flutter project scaffold
-      script: 'flutter create --org com.distantfrontiers --project-name audley_achievers
-        /tmp/scaffold --platforms android,ios
+      - name: Set up Flutter project scaffold
+        script: |
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+          if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
+          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
 
-        cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+      - name: Install dependencies
+        script: flutter pub get
 
-        cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+      - name: Set app display name
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
-        if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets;
-        fi
+      - name: Generate app icon
+        script: dart run flutter_launcher_icons
 
-        rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+      - name: Install CocoaPods
+        script: cd ios && pod install
 
-        rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+      - name: Set up iOS code signing
+        script: |
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            openssl genrsa 2048 2>/dev/null > /tmp/cert_key.pem
+            export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
+          fi
+          keychain initialize
+          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
 
-        for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f"
-        "$CM_BUILD_DIR/$f"; done
+      - name: Build IPA
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
-        rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
-
-        cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
-
-        if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets
-        "$CM_BUILD_DIR/assets"; fi
-
-        '
-    - name: Add internet permission
-      script: "sed -i \"s|<application|<uses-permission android:name=\"android.permission.INTERNET\"\
-        />\n    <application|\" \"$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml\"\
-        \ 2>/dev/null || true"
-    - name: Install dependencies
-      script: flutter pub get
-    - name: Set app display name
-      script: dart run rename setAppName --targets android,ios --value "Audley's Top
-        Performers Incentive"
-    - name: Generate app icon
-      script: dart run flutter_launcher_icons
-    - name: Install CocoaPods
-      script: cd ios && pod install
-    - name: Set up iOS code signing
-      script: "if [ -z \"$CERTIFICATE_PRIVATE_KEY\" ]; then\n  openssl genrsa 2048\
-        \ 2>/dev/null > /tmp/cert_key.pem\n  export CERTIFICATE_PRIVATE_KEY=\"$(cat\
-        \ /tmp/cert_key.pem)\"\nfi\nkeychain initialize\napp-store-connect fetch-signing-files\
-        \ \"com.distantfrontiers.audleyAchievers\" --type IOS_APP_STORE --create\n\
-        keychain add-certificates\nxcode-project use-profiles\n"
-    - name: Build IPA
-      script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
-    - build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
+
+
   web-workflow:
     name: Web Build
     max_build_duration: 30
@@ -189,58 +179,72 @@ workflows:
     environment:
       flutter: 3.22.3
     scripts:
-    - name: Set up Flutter project scaffold
-      script: 'flutter create --org com.distantfrontiers --project-name audley_achievers
-        /tmp/scaffold --platforms web
+      - name: Set up Flutter project scaffold
+        script: |
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms web
+          cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+          cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+          if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+          cp -r /tmp/scaffold/web "$CM_BUILD_DIR/web"
+          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
+          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
 
-        cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
+      - name: Install dependencies
+        script: flutter pub get
 
-        cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
+      - name: Fix compatibility for Flutter 3.22
+        script: sed -i '' 's/CardThemeData(/CardTheme(/g' lib/core/theme.dart
 
-        if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets;
-        fi
+      - name: Build web
+        script: flutter build web --release --base-href /audleyachievers/app/ --web-renderer html
 
-        cp -r /tmp/scaffold/web "$CM_BUILD_DIR/web"
+      - name: Prepare output
+        script: |
+          cd build/web
+          if [ -f "assets/assets/icon.png" ]; then cp assets/assets/icon.png favicon.png; fi
+          python3 << 'PYEOF'
+          content = """<?xml version="1.0" encoding="UTF-8"?>
+          <configuration>
+            <system.webServer>
+              <defaultDocument>
+                <files><clear /><add value="index.html" /></files>
+              </defaultDocument>
+              <security>
+                <requestFiltering>
+                  <fileExtensions allowUnlisted="true">
+                    <clear />
+                  </fileExtensions>
+                </requestFiltering>
+              </security>
+              <handlers>
+                <clear />
+                <add name="StaticFile" path="*" verb="*" modules="StaticFileModule,DefaultDocumentModule,DirectoryListingModule" resourceType="Either" requireAccess="Read" />
+              </handlers>
+              <staticContent>
+                <remove fileExtension=".json" />
+                <mimeMap fileExtension=".json" mimeType="application/json" />
+                <remove fileExtension=".js" />
+                <mimeMap fileExtension=".js" mimeType="application/javascript" />
+                <remove fileExtension=".otf" />
+                <mimeMap fileExtension=".otf" mimeType="font/otf" />
+                <remove fileExtension=".ttf" />
+                <mimeMap fileExtension=".ttf" mimeType="font/ttf" />
+                <remove fileExtension=".woff2" />
+                <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+                <remove fileExtension=".wasm" />
+                <mimeMap fileExtension=".wasm" mimeType="application/wasm" />
+              </staticContent>
+            </system.webServer>
+          </configuration>"""
+          with open('web.config', 'w') as f:
+              f.write(content)
+          print('web.config created')
+          PYEOF
+          echo "Output ready"
 
-        rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+      - name: Package web build
+        script: cd build/web && zip -r ../../web-build.zip .
 
-        cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
-
-        if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets
-        "$CM_BUILD_DIR/assets"; fi
-
-        '
-    - name: Install dependencies
-      script: flutter pub get
-    - name: Fix compatibility for Flutter 3.22
-      script: sed -i '' 's/CardThemeData(/CardTheme(/g' lib/core/theme.dart
-    - name: Build web
-      script: flutter build web --release --base-href /audleyachievers/app/ --web-renderer
-        html
-    - name: Prepare output
-      script: "cd build/web\nif [ -f \"assets/assets/icon.png\" ]; then cp assets/assets/icon.png\
-        \ favicon.png; fi\npython3 -c \"\ncontent = '''<?xml version=\\\"1.0\\\" encoding=\\\
-        \"UTF-8\\\"?>\n<configuration>\n  <system.webServer>\n    <defaultDocument>\n\
-        \      <files><clear /><add value=\\\"index.html\\\" /></files>\n    </defaultDocument>\n\
-        \    <security>\n      <requestFiltering>\n        <fileExtensions allowUnlisted=\\\
-        \"true\\\">\n          <clear />\n        </fileExtensions>\n      </requestFiltering>\n\
-        \    </security>\n    <handlers>\n      <clear />\n      <add name=\\\"StaticFile\\\
-        \" path=\\\"*\\\" verb=\\\"*\\\" modules=\\\"StaticFileModule,DefaultDocumentModule,DirectoryListingModule\\\
-        \" resourceType=\\\"Either\\\" requireAccess=\\\"Read\\\" />\n    </handlers>\n\
-        \    <staticContent>\n      <remove fileExtension=\\\".json\\\" />\n     \
-        \ <mimeMap fileExtension=\\\".json\\\" mimeType=\\\"application/json\\\" />\n\
-        \      <remove fileExtension=\\\".js\\\" />\n      <mimeMap fileExtension=\\\
-        \".js\\\" mimeType=\\\"application/javascript\\\" />\n      <remove fileExtension=\\\
-        \".otf\\\" />\n      <mimeMap fileExtension=\\\".otf\\\" mimeType=\\\"font/otf\\\
-        \" />\n      <remove fileExtension=\\\".ttf\\\" />\n      <mimeMap fileExtension=\\\
-        \".ttf\\\" mimeType=\\\"font/ttf\\\" />\n      <remove fileExtension=\\\"\
-        .woff2\\\" />\n      <mimeMap fileExtension=\\\".woff2\\\" mimeType=\\\"font/woff2\\\
-        \" />\n      <remove fileExtension=\\\".wasm\\\" />\n      <mimeMap fileExtension=\\\
-        \".wasm\\\" mimeType=\\\"application/wasm\\\" />\n    </staticContent>\n \
-        \ </system.webServer>\n</configuration>'''\nwith open('web.config', 'w') as\
-        \ f:\n    f.write(content)\nprint('web.config created')\n\"\necho \"Output\
-        \ ready\"\n"
-    - name: Package web build
-      script: cd build/web && zip -r ../../web-build.zip .
     artifacts:
-    - web-build.zip
+      - web-build.zip
