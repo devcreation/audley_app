@@ -71,13 +71,10 @@ workflows:
 
       - name: Generate keystore
         script: |
-          keytool -genkey -v \
-            -keystore "$CM_BUILD_DIR/release-keystore.jks" \
-            -alias "$CM_KEY_ALIAS" \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$CM_KEYSTORE_PASSWORD" \
-            -keypass "$CM_KEY_PASSWORD" \
-            -dname "CN=Distant Frontiers, OU=Dev, O=Distant Frontiers, L=Delhi, ST=Delhi, C=IN"
+          echo "$CM_KEYSTORE_BASE64" | base64 -D > "$CM_BUILD_DIR/release-keystore.jks" 2>/dev/null || \
+          echo "$CM_KEYSTORE_BASE64" | base64 --decode > "$CM_BUILD_DIR/release-keystore.jks"
+          ls -la "$CM_BUILD_DIR/release-keystore.jks"
+          keytool -list -keystore "$CM_BUILD_DIR/release-keystore.jks" -storepass "$CM_KEYSTORE_PASSWORD" | head -5
 
       - name: Build AAB
         script: flutter build appbundle --release
