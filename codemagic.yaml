@@ -9,16 +9,30 @@ workflows:
     scripts:
       - name: Set up Flutter project scaffold
         script: |
-          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          echo "==> Saving source code..."
           cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
           cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
           if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
-          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
-          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
-          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
-          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          echo "Saved lib files: $(find /tmp/my_lib -name '*.dart' | wc -l)"
+          head -3 /tmp/my_lib/main.dart
+
+          echo "==> Creating scaffold..."
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+
+          echo "==> Copying platform dirs..."
+          rm -rf "$CM_BUILD_DIR/android" "$CM_BUILD_DIR/ios"
+          cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+
+          echo "==> Restoring source code..."
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
           cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
           if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
+
+          echo "==> Verify main.dart is OUR app:"
+          head -3 "$CM_BUILD_DIR/lib/main.dart"
+          echo "Dart files: $(find "$CM_BUILD_DIR/lib" -name '*.dart' | wc -l)"
 
       - name: Add internet permission
         script: |
@@ -27,8 +41,6 @@ workflows:
             sed -i '' 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\
               <application/' "$MANIFEST"
             echo "INTERNET permission added"
-          else
-            echo "INTERNET permission already present"
           fi
 
       - name: Install dependencies
@@ -58,16 +70,28 @@ workflows:
     scripts:
       - name: Set up Flutter project scaffold
         script: |
-          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          echo "==> Saving source code..."
           cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
           cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
           if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
-          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
-          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
-          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
-          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          echo "Saved lib files: $(find /tmp/my_lib -name '*.dart' | wc -l)"
+
+          echo "==> Creating scaffold..."
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+
+          echo "==> Copying platform dirs..."
+          rm -rf "$CM_BUILD_DIR/android" "$CM_BUILD_DIR/ios"
+          cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+
+          echo "==> Restoring source code..."
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
           cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
           if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
+
+          echo "==> Verify main.dart is OUR app:"
+          head -3 "$CM_BUILD_DIR/lib/main.dart"
 
       - name: Add internet permission
         script: |
@@ -76,8 +100,6 @@ workflows:
             sed -i '' 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\
               <application/' "$MANIFEST"
             echo "INTERNET permission added"
-          else
-            echo "INTERNET permission already present"
           fi
 
       - name: Install dependencies
@@ -131,16 +153,41 @@ workflows:
     scripts:
       - name: Set up Flutter project scaffold
         script: |
-          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+          echo "==> Step 1: Save source code FIRST..."
           cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
           cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
           if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
-          rm -rf "$CM_BUILD_DIR/android" && cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
-          rm -rf "$CM_BUILD_DIR/ios" && cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
-          for f in .metadata; do [ -f "/tmp/scaffold/$f" ] && cp "/tmp/scaffold/$f" "$CM_BUILD_DIR/$f"; done
-          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+          echo "Saved: $(find /tmp/my_lib -name '*.dart' | wc -l) Dart files"
+          echo "main.dart first line: $(head -1 /tmp/my_lib/main.dart)"
+
+          echo "==> Step 2: Create Flutter scaffold..."
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms android,ios
+
+          echo "==> Step 3: Copy ONLY platform directories..."
+          rm -rf "$CM_BUILD_DIR/android"
+          rm -rf "$CM_BUILD_DIR/ios"
+          cp -r /tmp/scaffold/android "$CM_BUILD_DIR/android"
+          cp -r /tmp/scaffold/ios "$CM_BUILD_DIR/ios"
+
+          echo "==> Step 4: Restore OUR source code..."
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
           cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
-          if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
+          if [ -d "/tmp/my_assets" ]; then
+            rm -rf "$CM_BUILD_DIR/assets"
+            cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"
+          fi
+
+          echo "==> VERIFICATION:"
+          echo "main.dart starts with: $(head -1 "$CM_BUILD_DIR/lib/main.dart")"
+          echo "Total Dart files: $(find "$CM_BUILD_DIR/lib" -name '*.dart' | wc -l)"
+          echo "Has Riverpod: $(grep -l 'riverpod' "$CM_BUILD_DIR/lib/main.dart" && echo YES || echo NO)"
+          if grep -q "Flutter Demo" "$CM_BUILD_DIR/lib/main.dart"; then
+            echo "ERROR: main.dart is STILL the default Flutter template!"
+            exit 1
+          else
+            echo "OK: main.dart is our Audley app"
+          fi
 
       - name: Install dependencies
         script: flutter pub get
@@ -166,7 +213,10 @@ workflows:
           xcode-project use-profiles
 
       - name: Build IPA
-        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+        script: |
+          echo "Final check before build:"
+          head -5 "$CM_BUILD_DIR/lib/main.dart"
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -181,12 +231,15 @@ workflows:
     scripts:
       - name: Set up Flutter project scaffold
         script: |
-          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms web
           cp -r "$CM_BUILD_DIR/lib" /tmp/my_lib
           cp "$CM_BUILD_DIR/pubspec.yaml" /tmp/my_pubspec.yaml
           if [ -d "$CM_BUILD_DIR/assets" ]; then cp -r "$CM_BUILD_DIR/assets" /tmp/my_assets; fi
+
+          flutter create --org com.distantfrontiers --project-name audley_achievers /tmp/scaffold --platforms web
           cp -r /tmp/scaffold/web "$CM_BUILD_DIR/web"
-          rm -rf "$CM_BUILD_DIR/lib" && cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
+
+          rm -rf "$CM_BUILD_DIR/lib"
+          cp -r /tmp/my_lib "$CM_BUILD_DIR/lib"
           cp /tmp/my_pubspec.yaml "$CM_BUILD_DIR/pubspec.yaml"
           if [ -d "/tmp/my_assets" ]; then rm -rf "$CM_BUILD_DIR/assets"; cp -r /tmp/my_assets "$CM_BUILD_DIR/assets"; fi
 
