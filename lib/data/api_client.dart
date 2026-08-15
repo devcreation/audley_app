@@ -138,4 +138,13 @@ class ApiClient {
     }
     return {'success': false, 'message': e.toString()};
   }
+
+  // ─── Delete Account ────────────────────────
+  Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final r = await _dio.post('/forms.php', data: {'action': 'delete_account'});
+      return Map<String, dynamic>.from(r.data);
+    } catch (e) { return _err(e); }
+  }
+
 }

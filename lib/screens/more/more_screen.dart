@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../data/api_client.dart';
 import '../../providers/providers.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -11,6 +12,8 @@ class MoreScreen extends ConsumerWidget {
     final siteAsync = ref.watch(siteDataProvider);
     final config = ref.watch(appConfigProvider).valueOrNull;
     final isDark = ref.watch(darkModeProvider);
+    final authState = ref.watch(authProvider);
+    final isLoggedIn = authState.status == AuthStatus.authenticated;
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -49,24 +52,36 @@ class MoreScreen extends ConsumerWidget {
           child: Column(children: [
             Image.asset('assets/logo.png', width: 48, height: 48),
             const SizedBox(height: 8),
-            Text(config?.appName ?? "Audley Achievers' Incentive",
+            Text(config?.appName ?? "Audley's Top Performers Incentive",
               style: TextStyle(fontFamily: 'serif', fontSize: 14, fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : AppTheme.charcoal), textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text('Version 1.0.0', style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
+            Text('Version 1.0.4', style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
           ]),
         ),
 
         const SizedBox(height: 20),
 
-        // ─── Sign Out ───
-        SizedBox(width: double.infinity, height: 48,
-          child: OutlinedButton.icon(
-            onPressed: () => _confirmSignOut(context, ref),
-            icon: const Icon(Icons.logout, size: 18, color: Colors.red),
-            label: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
-            style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.red.withOpacity(0.3)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
+        // ─── Sign Out (only if logged in) ───
+        if (isLoggedIn) ...[
+          SizedBox(width: double.infinity, height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => _confirmSignOut(context, ref),
+              icon: const Icon(Icons.logout, size: 18, color: Colors.red),
+              label: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
+          const SizedBox(height: 12),
+
+          // ─── Delete Account (only if logged in) ───
+          SizedBox(width: double.infinity, height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => _confirmDeleteAccount(context, ref),
+              icon: const Icon(Icons.delete_forever, size: 18, color: Colors.red),
+              label: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
+        ],
         const SizedBox(height: 24),
       ]),
     );
@@ -99,6 +114,30 @@ class MoreScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         TextButton(onPressed: () { Navigator.pop(ctx); ref.read(authProvider.notifier).logout(); },
           child: const Text('Sign Out', style: TextStyle(color: Colors.red))),
+      ]));
+  }
+
+  void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Delete Account'),
+      content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone. All your data including registration, tour selections, and personal information will be removed.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        TextButton(onPressed: () async {
+          Navigator.pop(ctx);
+          final api = ApiClient();
+          final r = await api.deleteAccount();
+          if (context.mounted) {
+            if (r['success'] == true) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Account deleted successfully'), backgroundColor: Colors.green));
+              ref.read(authProvider.notifier).logout();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(r['message'] ?? 'Failed to delete account'), backgroundColor: Colors.red));
+            }
+          }
+        }, child: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700))),
       ]));
   }
 }

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme.dart';
 import 'data/local_storage.dart';
 import 'providers/providers.dart';
-import 'screens/auth/login_screen.dart';
 import 'screens/main_shell.dart';
 
 void main() async {
@@ -25,18 +24,18 @@ class AudleyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: const AuthGate(),
+      home: const AppEntry(),
     );
   }
 }
 
-class AuthGate extends ConsumerStatefulWidget {
-  const AuthGate({super.key});
+class AppEntry extends ConsumerStatefulWidget {
+  const AppEntry({super.key});
   @override
-  ConsumerState<AuthGate> createState() => _AuthGateState();
+  ConsumerState<AppEntry> createState() => _AppEntryState();
 }
 
-class _AuthGateState extends ConsumerState<AuthGate> {
+class _AppEntryState extends ConsumerState<AppEntry> {
   @override
   void initState() {
     super.initState();
@@ -46,11 +45,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-
-    if (authState.status == AuthStatus.authenticated) {
-      return const MainShell();
-    }
-    // Show logo + loading while checking auth, then login screen
+    // Show loading splash while checking auth
     if (authState.status == AuthStatus.unknown && authState.isLoading) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -61,6 +56,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
         ])),
       );
     }
-    return const LoginScreen();
+    // Always show MainShell - it handles login prompts for restricted tabs
+    return const MainShell();
   }
 }
