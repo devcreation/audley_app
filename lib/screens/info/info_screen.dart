@@ -17,8 +17,16 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
   late TabController _tabCtrl;
   String _faqCat = 'all';
 
+  bool _isLoggedIn = false;
+
   @override
-  void initState() { super.initState(); _tabCtrl = TabController(length: 4, vsync: this); }
+  void initState() { super.initState(); _updateTabs(); }
+
+  void _updateTabs() {
+    final authState = ref.read(authProvider);
+    _isLoggedIn = authState.status == AuthStatus.authenticated;
+    _tabCtrl = TabController(length: _isLoggedIn ? 4 : 3, vsync: this);
+  }
   @override
   void dispose() { _tabCtrl.dispose(); super.dispose(); }
 
@@ -31,7 +39,12 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-          tabs: const [Tab(text: 'Hotels'), Tab(text: 'Fleet'), Tab(text: 'FAQ'), Tab(text: 'Participants')])),
+          tabs: [
+            const Tab(text: 'Hotels'),
+            const Tab(text: 'Fleet'),
+            const Tab(text: 'FAQ'),
+            if (_isLoggedIn) const Tab(text: 'Participants'),
+          ])),
       body: siteAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => const Center(child: Text('Failed to load')),
@@ -42,7 +55,7 @@ class _InfoScreenState extends ConsumerState<InfoScreen> with SingleTickerProvid
             _hotelsTab(site.hotels, site.contacts.hotelContacts, isDark),
             _fleetTab(site.fleet, isDark),
             _faqTab(site.faqs, isDark, site.travelGuidelinesUrl),
-            const _ParticipantDirectory(),
+            if (_isLoggedIn) const _ParticipantDirectory(),
           ]);
         },
       ),
