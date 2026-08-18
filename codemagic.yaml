@@ -214,9 +214,17 @@ workflows:
 
       - name: Build IPA
         script: |
-          echo "Final check before build:"
-          head -5 "$CM_BUILD_DIR/lib/main.dart"
-          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+          # Try flutter build ipa first
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist || {
+            echo "flutter build ipa failed, trying xcodebuild..."
+            flutter build ios --release --no-codesign
+            cd ios
+            xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath /tmp/Runner.xcarchive archive CODE_SIGN_STYLE=Manual -allowProvisioningUpdates
+            xcodebuild -exportArchive -archivePath /tmp/Runner.xcarchive -exportPath /tmp/ipa_output -exportOptionsPlist /Users/builder/export_options.plist
+            mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
+            cp /tmp/ipa_output/*.ipa "$CM_BUILD_DIR/build/ios/ipa/"
+          }
+          echo "IPA build complete"
 
     artifacts:
       - build/ios/ipa/*.ipa
