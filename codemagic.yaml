@@ -201,23 +201,46 @@ workflows:
       - name: Install CocoaPods
         script: cd ios && pod install
 
-      - name: Set up iOS code signing
+      - name: Sign and build IPA
         script: |
-          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
-            openssl genrsa 2048 2>/dev/null > /tmp/cert_key.pem
-            export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
-          fi
-          keychain initialize
-          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" --type IOS_APP_STORE --create
-          keychain add-certificates
-          xcode-project use-profiles
+          set -e
 
-      - name: Configure signing and build IPA
-        script: |
+          # Generate certificate key
+          openssl genrsa 2048 2>/dev/null > /tmp/cert_key.pem
+          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
+          echo "Certificate key ready"
+
+          # Fetch signing files
+          echo "=== Fetching signing files ==="
+          keychain initialize
+          app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
+            --type IOS_APP_STORE --create 2>&1 || true
+
+          # Add certificates
+          keychain add-certificates || true
+
+          # Find profiles
+          echo "=== Looking for profiles ==="
+          PROFILES=$(find ~/Library -name "*.mobileprovision" 2>/dev/null)
+          P12S=$(find ~/Library -name "*.p12" 2>/dev/null)
+          echo "Profiles found: $PROFILES"
+          echo "P12s found: $P12S"
+
+          if [ -z "$PROFILES" ]; then
+            echo "ERROR: No profiles downloaded! Checking app-store-connect output..."
+            app-store-connect fetch-signing-files "com.distantfrontiers.audleyAchievers" \
+              --type IOS_APP_STORE --create --verbose 2>&1
+            PROFILES=$(find ~/Library -name "*.mobileprovision" 2>/dev/null)
+          fi
+
+          # Configure Xcode project
+          xcode-project use-profiles || true
+
+          # Manual project patching
+          echo "=== Patching Xcode project ==="
           python3 << 'SIGNPY'
           import glob, subprocess, plistlib, os, re
 
-          # Find provisioning profile
           search = [
               os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"),
               os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles/*.mobileprovision"),
@@ -225,46 +248,53 @@ workflows:
           profiles = []
           for p in search:
               profiles.extend(glob.glob(p))
-          
-          if profiles:
-              profile_path = profiles[0]
-              result = subprocess.run(["security", "cms", "-D", "-i", profile_path], capture_output=True, text=True)
-              plist = plistlib.loads(result.stdout.encode())
-              profile_name = plist["Name"]
-              team_id = plist["TeamIdentifier"][0]
-              print(f"Profile: {profile_name}, Team: {team_id}")
-          else:
-              print("WARNING: No profiles found, using defaults")
-              profile_name = ""
-              team_id = ""
 
-          # Find signing identity
+          # Also search everywhere
+          import pathlib
+          profiles.extend([str(p) for p in pathlib.Path.home().rglob("*.mobileprovision")])
+          profiles = list(set(profiles))
+
+          if not profiles:
+              print("CRITICAL: No provisioning profiles anywhere!")
+              # List what fetch-signing-files downloaded
+              for d in [os.path.expanduser("~/Library/MobileDevice"), os.path.expanduser("~/Library/Developer")]:
+                  if os.path.exists(d):
+                      for root, dirs, files in os.walk(d):
+                          for f in files:
+                              print(f"  {os.path.join(root, f)}")
+              exit(1)
+
+          profile_path = profiles[0]
+          print(f"Using: {profile_path}")
+          result = subprocess.run(["security", "cms", "-D", "-i", profile_path], capture_output=True, text=True)
+          plist = plistlib.loads(result.stdout.encode())
+          profile_name = plist["Name"]
+          team_id = plist["TeamIdentifier"][0]
+          print(f"Profile: {profile_name}, Team: {team_id}")
+
           result = subprocess.run(["security", "find-identity", "-v", "-p", "codesigning"], capture_output=True, text=True)
+          print(f"Identities:\n{result.stdout}")
           identity = "Apple Distribution"
           for line in result.stdout.split("\n"):
               if "Apple Distribution" in line or "iPhone Distribution" in line:
                   identity = line.split('"')[1]
                   break
-          print(f"Identity: {identity}")
+          print(f"Using identity: {identity}")
 
-          # Patch Xcode project
           pbxproj = "ios/Runner.xcodeproj/project.pbxproj"
-          if os.path.exists(pbxproj):
-              with open(pbxproj, "r") as f:
-                  c = f.read()
-              c = c.replace("ProvisioningStyle = Automatic", "ProvisioningStyle = Manual")
-              c = c.replace("CODE_SIGN_STYLE = Automatic", "CODE_SIGN_STYLE = Manual")
-              c = re.sub(r'DEVELOPMENT_TEAM = "?[^";]*"?;', f'DEVELOPMENT_TEAM = {team_id};', c)
-              c = re.sub(r'DevelopmentTeam = [^;]*;', f'DevelopmentTeam = {team_id};', c)
-              if "PROVISIONING_PROFILE_SPECIFIER" in c:
-                  c = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "?[^";]*"?;', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', c)
-              else:
-                  c = c.replace("CODE_SIGN_STYLE = Manual;", f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile_name}";')
-              with open(pbxproj, "w") as f:
-                  f.write(c)
-              print("Xcode project patched")
+          with open(pbxproj, "r") as f:
+              c = f.read()
+          c = c.replace("ProvisioningStyle = Automatic", "ProvisioningStyle = Manual")
+          c = c.replace("CODE_SIGN_STYLE = Automatic", "CODE_SIGN_STYLE = Manual")
+          c = re.sub(r'DEVELOPMENT_TEAM = "?[^";]*"?;', f'DEVELOPMENT_TEAM = {team_id};', c)
+          c = re.sub(r'DevelopmentTeam = [^;]*;', f'DevelopmentTeam = {team_id};', c)
+          if "PROVISIONING_PROFILE_SPECIFIER" in c:
+              c = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "?[^";]*"?;', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', c)
+          else:
+              c = c.replace("CODE_SIGN_STYLE = Manual;", f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile_name}";')
+          with open(pbxproj, "w") as f:
+              f.write(c)
 
-          # Create export options plist
           export_plist = {
               "method": "app-store",
               "teamID": team_id,
@@ -274,10 +304,9 @@ workflows:
               "uploadBitcode": False,
               "uploadSymbols": True,
           }
-          plist_path = os.path.expanduser("~/export_options.plist")
-          with open(plist_path, "wb") as f:
+          with open(os.path.expanduser("~/export_options.plist"), "wb") as f:
               plistlib.dump(export_plist, f)
-          print(f"Export options created at {plist_path}")
+          print("Export options and project configured")
           SIGNPY
 
           echo "=== Building IPA ==="
