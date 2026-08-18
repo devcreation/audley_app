@@ -207,11 +207,10 @@ workflows:
         script: |
           set -e
 
-          # Use permanent certificate key from env var (reused every build)
-          echo "$IOS_CERT_KEY_BASE64" | base64 -D > /tmp/cert_key.pem 2>/dev/null || \
-          echo "$IOS_CERT_KEY_BASE64" | base64 --decode > /tmp/cert_key.pem
+          # Generate certificate key during build
+          openssl genrsa -traditional 2048 2>/dev/null > /tmp/cert_key.pem
           export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
-          echo "Certificate key loaded ($(wc -c < /tmp/cert_key.pem) bytes)"
+          echo "Certificate key generated: $(head -1 /tmp/cert_key.pem)"
 
           # Fetch signing files
           echo "=== Fetching signing files ==="
