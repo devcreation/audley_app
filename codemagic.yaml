@@ -212,19 +212,76 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
-      - name: Build IPA
+      - name: Configure signing and build IPA
         script: |
-          # Try flutter build ipa first
-          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist || {
-            echo "flutter build ipa failed, trying xcodebuild..."
-            flutter build ios --release --no-codesign
-            cd ios
-            xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath /tmp/Runner.xcarchive archive CODE_SIGN_STYLE=Manual -allowProvisioningUpdates
-            xcodebuild -exportArchive -archivePath /tmp/Runner.xcarchive -exportPath /tmp/ipa_output -exportOptionsPlist /Users/builder/export_options.plist
-            mkdir -p "$CM_BUILD_DIR/build/ios/ipa"
-            cp /tmp/ipa_output/*.ipa "$CM_BUILD_DIR/build/ios/ipa/"
+          python3 << 'SIGNPY'
+          import glob, subprocess, plistlib, os, re
+
+          # Find provisioning profile
+          search = [
+              os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"),
+              os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles/*.mobileprovision"),
+          ]
+          profiles = []
+          for p in search:
+              profiles.extend(glob.glob(p))
+          
+          if profiles:
+              profile_path = profiles[0]
+              result = subprocess.run(["security", "cms", "-D", "-i", profile_path], capture_output=True, text=True)
+              plist = plistlib.loads(result.stdout.encode())
+              profile_name = plist["Name"]
+              team_id = plist["TeamIdentifier"][0]
+              print(f"Profile: {profile_name}, Team: {team_id}")
+          else:
+              print("WARNING: No profiles found, using defaults")
+              profile_name = ""
+              team_id = ""
+
+          # Find signing identity
+          result = subprocess.run(["security", "find-identity", "-v", "-p", "codesigning"], capture_output=True, text=True)
+          identity = "Apple Distribution"
+          for line in result.stdout.split("\n"):
+              if "Apple Distribution" in line or "iPhone Distribution" in line:
+                  identity = line.split('"')[1]
+                  break
+          print(f"Identity: {identity}")
+
+          # Patch Xcode project
+          pbxproj = "ios/Runner.xcodeproj/project.pbxproj"
+          if os.path.exists(pbxproj):
+              with open(pbxproj, "r") as f:
+                  c = f.read()
+              c = c.replace("ProvisioningStyle = Automatic", "ProvisioningStyle = Manual")
+              c = c.replace("CODE_SIGN_STYLE = Automatic", "CODE_SIGN_STYLE = Manual")
+              c = re.sub(r'DEVELOPMENT_TEAM = "?[^";]*"?;', f'DEVELOPMENT_TEAM = {team_id};', c)
+              c = re.sub(r'DevelopmentTeam = [^;]*;', f'DevelopmentTeam = {team_id};', c)
+              if "PROVISIONING_PROFILE_SPECIFIER" in c:
+                  c = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = "?[^";]*"?;', f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";', c)
+              else:
+                  c = c.replace("CODE_SIGN_STYLE = Manual;", f'CODE_SIGN_STYLE = Manual;\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile_name}";')
+              with open(pbxproj, "w") as f:
+                  f.write(c)
+              print("Xcode project patched")
+
+          # Create export options plist
+          export_plist = {
+              "method": "app-store",
+              "teamID": team_id,
+              "signingStyle": "manual",
+              "provisioningProfiles": {"com.distantfrontiers.audleyAchievers": profile_name},
+              "signingCertificate": identity,
+              "uploadBitcode": False,
+              "uploadSymbols": True,
           }
-          echo "IPA build complete"
+          plist_path = os.path.expanduser("~/export_options.plist")
+          with open(plist_path, "wb") as f:
+              plistlib.dump(export_plist, f)
+          print(f"Export options created at {plist_path}")
+          SIGNPY
+
+          echo "=== Building IPA ==="
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
