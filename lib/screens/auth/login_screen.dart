@@ -34,6 +34,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .read(authProvider.notifier)
         .login(_emailCtrl.text.trim(), _passCtrl.text);
 
+    if (success && mounted) {
+      // Pop back to AppEntry which reactively shows MainShell
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
     if (!success && mounted) {
       final error = ref.read(authProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(

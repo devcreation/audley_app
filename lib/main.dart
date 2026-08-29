@@ -5,6 +5,7 @@ import 'core/theme.dart';
 import 'data/local_storage.dart';
 import 'providers/providers.dart';
 import 'screens/main_shell.dart';
+import 'screens/landing/landing_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,7 @@ class _AppEntryState extends ConsumerState<AppEntry> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
     // Show loading splash while checking auth
     if (authState.status == AuthStatus.unknown && authState.isLoading) {
       return Scaffold(
@@ -56,7 +58,13 @@ class _AppEntryState extends ConsumerState<AppEntry> {
         ])),
       );
     }
-    // Always show MainShell - it handles login prompts for restricted tabs
-    return const MainShell();
+
+    // If logged in → MainShell with all tabs active
+    if (authState.status == AuthStatus.authenticated) {
+      return const MainShell();
+    }
+
+    // Not logged in → Landing page
+    return const LandingScreen();
   }
 }

@@ -56,7 +56,7 @@ class MoreScreen extends ConsumerWidget {
               style: TextStyle(fontFamily: 'serif', fontSize: 14, fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : AppTheme.charcoal), textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text('Version 1.0.4', style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
+            Text('Version 1.0.5', style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
           ]),
         ),
 
