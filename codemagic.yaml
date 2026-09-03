@@ -47,43 +47,7 @@ workflows:
         script: flutter pub get
 
       - name: Set app display name
-        script: |
-          python3 << 'PYSCRIPT'
-          import os, re, plistlib
-
-          APP_NAME = "Audley\u2019s Top Performers Incentive"
-          APP_NAME_PLAIN = "Audley's Top Performers Incentive"
-          build_dir = os.environ["CM_BUILD_DIR"]
-
-          # Android - AndroidManifest.xml
-          manifest = os.path.join(build_dir, "android/app/src/main/AndroidManifest.xml")
-          with open(manifest, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'android:label="[^"]*"', f'android:label="{APP_NAME_PLAIN}"', txt)
-          with open(manifest, "w") as f:
-              f.write(txt)
-          print(f"Android label set to: {APP_NAME_PLAIN}")
-
-          # iOS - Info.plist
-          plist_path = os.path.join(build_dir, "ios/Runner/Info.plist")
-          with open(plist_path, "rb") as f:
-              plist = plistlib.load(f)
-          plist["CFBundleDisplayName"] = APP_NAME_PLAIN
-          plist["CFBundleName"] = APP_NAME_PLAIN
-          with open(plist_path, "wb") as f:
-              plistlib.dump(plist, f)
-          print(f"iOS display name set to: {APP_NAME_PLAIN}")
-
-          # iOS - project.pbxproj
-          pbx = os.path.join(build_dir, "ios/Runner.xcodeproj/project.pbxproj")
-          with open(pbx, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'PRODUCT_NAME = "[^"]*"', f'PRODUCT_NAME = "{APP_NAME_PLAIN}"', txt)
-          txt = txt.replace("PRODUCT_NAME = audley_achievers", f'PRODUCT_NAME = "{APP_NAME_PLAIN}"')
-          with open(pbx, "w") as f:
-              f.write(txt)
-          print("iOS PRODUCT_NAME updated")
-          PYSCRIPT
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
       - name: Generate app icon
         script: dart run flutter_launcher_icons
@@ -142,43 +106,7 @@ workflows:
         script: flutter pub get
 
       - name: Set app display name
-        script: |
-          python3 << 'PYSCRIPT'
-          import os, re, plistlib
-
-          APP_NAME = "Audley\u2019s Top Performers Incentive"
-          APP_NAME_PLAIN = "Audley's Top Performers Incentive"
-          build_dir = os.environ["CM_BUILD_DIR"]
-
-          # Android - AndroidManifest.xml
-          manifest = os.path.join(build_dir, "android/app/src/main/AndroidManifest.xml")
-          with open(manifest, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'android:label="[^"]*"', f'android:label="{APP_NAME_PLAIN}"', txt)
-          with open(manifest, "w") as f:
-              f.write(txt)
-          print(f"Android label set to: {APP_NAME_PLAIN}")
-
-          # iOS - Info.plist
-          plist_path = os.path.join(build_dir, "ios/Runner/Info.plist")
-          with open(plist_path, "rb") as f:
-              plist = plistlib.load(f)
-          plist["CFBundleDisplayName"] = APP_NAME_PLAIN
-          plist["CFBundleName"] = APP_NAME_PLAIN
-          with open(plist_path, "wb") as f:
-              plistlib.dump(plist, f)
-          print(f"iOS display name set to: {APP_NAME_PLAIN}")
-
-          # iOS - project.pbxproj
-          pbx = os.path.join(build_dir, "ios/Runner.xcodeproj/project.pbxproj")
-          with open(pbx, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'PRODUCT_NAME = "[^"]*"', f'PRODUCT_NAME = "{APP_NAME_PLAIN}"', txt)
-          txt = txt.replace("PRODUCT_NAME = audley_achievers", f'PRODUCT_NAME = "{APP_NAME_PLAIN}"')
-          with open(pbx, "w") as f:
-              f.write(txt)
-          print("iOS PRODUCT_NAME updated")
-          PYSCRIPT
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
       - name: Generate app icon
         script: dart run flutter_launcher_icons
@@ -267,43 +195,7 @@ workflows:
         script: flutter pub get
 
       - name: Set app display name
-        script: |
-          python3 << 'PYSCRIPT'
-          import os, re, plistlib
-
-          APP_NAME = "Audley\u2019s Top Performers Incentive"
-          APP_NAME_PLAIN = "Audley's Top Performers Incentive"
-          build_dir = os.environ["CM_BUILD_DIR"]
-
-          # Android - AndroidManifest.xml
-          manifest = os.path.join(build_dir, "android/app/src/main/AndroidManifest.xml")
-          with open(manifest, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'android:label="[^"]*"', f'android:label="{APP_NAME_PLAIN}"', txt)
-          with open(manifest, "w") as f:
-              f.write(txt)
-          print(f"Android label set to: {APP_NAME_PLAIN}")
-
-          # iOS - Info.plist
-          plist_path = os.path.join(build_dir, "ios/Runner/Info.plist")
-          with open(plist_path, "rb") as f:
-              plist = plistlib.load(f)
-          plist["CFBundleDisplayName"] = APP_NAME_PLAIN
-          plist["CFBundleName"] = APP_NAME_PLAIN
-          with open(plist_path, "wb") as f:
-              plistlib.dump(plist, f)
-          print(f"iOS display name set to: {APP_NAME_PLAIN}")
-
-          # iOS - project.pbxproj
-          pbx = os.path.join(build_dir, "ios/Runner.xcodeproj/project.pbxproj")
-          with open(pbx, "r") as f:
-              txt = f.read()
-          txt = re.sub(r'PRODUCT_NAME = "[^"]*"', f'PRODUCT_NAME = "{APP_NAME_PLAIN}"', txt)
-          txt = txt.replace("PRODUCT_NAME = audley_achievers", f'PRODUCT_NAME = "{APP_NAME_PLAIN}"')
-          with open(pbx, "w") as f:
-              f.write(txt)
-          print("iOS PRODUCT_NAME updated")
-          PYSCRIPT
+        script: dart run rename setAppName --targets android,ios --value "Audley's Top Performers Incentive"
 
       - name: Generate app icon
         script: dart run flutter_launcher_icons
