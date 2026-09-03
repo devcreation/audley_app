@@ -115,12 +115,27 @@ workflows:
 
       - name: Set app display name
         script: |
-          APP_NAME="Audley's Top Performers Incentive"
-          sed -i '' "s/android:label=\"audley_achievers\"/android:label=\"$APP_NAME\"/" "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
-          sed -i '' "s/PRODUCT_NAME = audley_achievers/PRODUCT_NAME = $APP_NAME/g" "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_NAME" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $APP_NAME" "$CM_BUILD_DIR/ios/Runner/Info.plist"
-          echo "App name set to: $APP_NAME"
+          APP_NAME="Audley'"'"'s Top Performers Incentive"
+
+          # Android - replace any android:label value
+          sed -i '' 's/android:label="[^"]*"/android:label="'"Audley\'s Top Performers Incentive"'"/' "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+          echo "Android label:"
+          grep "android:label" "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+
+          # iOS - CFBundleDisplayName in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null ||           /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+
+          # iOS - CFBundleName in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null || true
+
+          # iOS - PRODUCT_NAME in project.pbxproj (replace all variations)
+          sed -i '' 's/PRODUCT_NAME = "[^"]*"/PRODUCT_NAME = "Audley'"'"'s Top Performers Incentive"/g' "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+          sed -i '' 's/PRODUCT_NAME = audley_achievers/PRODUCT_NAME = "Audley'"'"'s Top Performers Incentive"/g' "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+
+          echo "iOS Display Name:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+          echo "iOS Bundle Name:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$CM_BUILD_DIR/ios/Runner/Info.plist"
 
       - name: Generate app icon
         script: dart run flutter_launcher_icons
@@ -210,12 +225,27 @@ workflows:
 
       - name: Set app display name
         script: |
-          APP_NAME="Audley's Top Performers Incentive"
-          sed -i '' "s/android:label=\"audley_achievers\"/android:label=\"$APP_NAME\"/" "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
-          sed -i '' "s/PRODUCT_NAME = audley_achievers/PRODUCT_NAME = $APP_NAME/g" "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_NAME" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $APP_NAME" "$CM_BUILD_DIR/ios/Runner/Info.plist"
-          echo "App name set to: $APP_NAME"
+          APP_NAME="Audley'"'"'s Top Performers Incentive"
+
+          # Android - replace any android:label value
+          sed -i '' 's/android:label="[^"]*"/android:label="'"Audley\'s Top Performers Incentive"'"/' "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+          echo "Android label:"
+          grep "android:label" "$CM_BUILD_DIR/android/app/src/main/AndroidManifest.xml"
+
+          # iOS - CFBundleDisplayName in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null ||           /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+
+          # iOS - CFBundleName in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Audley's Top Performers Incentive" "$CM_BUILD_DIR/ios/Runner/Info.plist" 2>/dev/null || true
+
+          # iOS - PRODUCT_NAME in project.pbxproj (replace all variations)
+          sed -i '' 's/PRODUCT_NAME = "[^"]*"/PRODUCT_NAME = "Audley'"'"'s Top Performers Incentive"/g' "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+          sed -i '' 's/PRODUCT_NAME = audley_achievers/PRODUCT_NAME = "Audley'"'"'s Top Performers Incentive"/g' "$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj"
+
+          echo "iOS Display Name:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$CM_BUILD_DIR/ios/Runner/Info.plist"
+          echo "iOS Bundle Name:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$CM_BUILD_DIR/ios/Runner/Info.plist"
 
       - name: Generate app icon
         script: dart run flutter_launcher_icons
@@ -225,21 +255,28 @@ workflows:
 
       - name: Set up iOS code signing
         script: |
-          # Generate RSA private key for certificate signing
-          openssl genrsa -out /tmp/cert_key.pem 2048
-          echo "Key generated:"
+          # Generate RSA private key in PKCS#1 format (required by Codemagic CLI)
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform PEM -out /tmp/cert_key_pkcs8.pem
+          openssl rsa -in /tmp/cert_key_pkcs8.pem -out /tmp/cert_key.pem -traditional 2>/dev/null ||             openssl rsa -in /tmp/cert_key_pkcs8.pem -out /tmp/cert_key.pem
+          echo "Key format:"
           head -1 /tmp/cert_key.pem
+
+          # Set as env var for Codemagic CLI
+          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
 
           keychain initialize
 
-          app-store-connect fetch-signing-files \
-            "com.distantfrontiers.audleyAchievers" \
-            --type IOS_APP_STORE \
-            --certificate-key @file:/tmp/cert_key.pem \
-            --create
+          app-store-connect fetch-signing-files             "com.distantfrontiers.audleyAchievers"             --type IOS_APP_STORE             --create
+
+          echo "=== Certificates found ==="
+          ls -la ~/Library/MobileDevice/Certificates/ 2>/dev/null || echo "No certs dir"
+          ls -la ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles dir"
 
           keychain add-certificates
           xcode-project use-profiles
+
+          echo "=== Export options ==="
+          cat /Users/builder/export_options.plist 2>/dev/null | head -20
 
       - name: Build IPA
         script: |
